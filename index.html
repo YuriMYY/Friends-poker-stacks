@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Poker Stack Planner — Mobile Friendly</title>
+<style>
+  :root{
+    --bg:#fbfbfc;
+    --muted:#666;
+    --accent:#0a66cc;
+    --ok:#e9f9ef;
+    --warn:#fff0f2;
+    --card:#fff;
+    --mono:#f7f7f7;
+    --radius:10px;
+  }
+  html,body{height:100%}
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Hiragino Kaku Gothic ProN","Meiryo",sans-serif;margin:14px;background:var(--bg);color:#111;-webkit-font-smoothing:antialiased}
+  h1{font-size:1.2rem;margin:0 0 6px}
+  p.lead{margin:0 0 10px;color:var(--muted);font-size:.95rem}
+  label{display:block;margin-top:10px;font-weight:700}
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  input[type="number"], input[type="text"], button{
+    padding:12px 10px;border:1px solid #e6e6e6;border-radius:8px;font-size:1rem;
+  }
+  input[type="number"], input[type="text"]{width:160px;box-sizing:border-box}
+  button{background:var(--accent);color:#fff;border:0;cursor:pointer;border-radius:10px}
+  button.secondary{background:#888}
+  .flex{display:flex;gap:12px;align-items:flex-start}
+  .col{flex:1;min-width:260px}
+  .chip-table{width:100%;border-collapse:collapse;margin-top:8px}
+  .chip-table thead th{padding:8px;text-align:left;border-bottom:1px solid #eee;color:var(--muted)}
+  .chip-table td{padding:8px;border-bottom:1px solid #f2f2f2}
+  .chip-table input{width:100%;padding:8px;border-radius:6px;border:1px solid #eee}
+  .result{margin-top:14px;padding:12px;border-radius:12px;background:var(--card);border:1px solid #eee}
+  .warn{color:#a00;background:var(--warn);padding:10px;border-radius:8px;margin-top:8px;border:1px solid #f5c}
+  .ok{color:#117a3d;background:var(--ok);padding:10px;border-radius:8px;margin-top:8px;border:1px solid #bfb}
+  small{color:var(--muted)}
+  footer{margin-top:18px;color:var(--muted);font-size:.9rem}
+  .mono{font-family:monospace;background:var(--mono);padding:6px;border-radius:6px;display:inline-block}
+
+  /* Responsive: mobile tweaks */
+  @media (max-width: 720px){
+    .flex{flex-direction:column}
+    .col{min-width:0}
+    input[type="number"], input[type="text"]{width:100%}
+    .controls{flex-direction:column;align-items:stretch}
+    button{padding:14px;border-radius:12px;font-size:1.05rem}
+    /* Table -> card-like rows */
+    .chip-table thead{display:none}
+    .chip-table tbody tr{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;background:var(--card);border-radius:10px;margin-bottom:8px;border:1px solid #f0f0f0}
+    .chip-table tbody tr td{border:0;padding:6px}
+    .chip-table tbody tr td[data-label]{font-size:.9rem;color:var(--muted)}
+    .chip-table tbody tr td.value{font-weight:700;font-size:1.02rem}
+  }
+
+  /* Larger screens: make inputs compact */
+  @media (min-width: 721px){
+    input[type="number"], input[type="text"]{width:140px}
+  }
+
+  /* accessibility focus */
+  input:focus, button:focus {outline:3px solid rgba(10,102,204,0.12);outline-offset:2px}
+</style>
+</head>
+<body>
+  <h1>Poker Stack Planner</h1>
+  <p class="lead">Enter buy-in, player count, and chip inventory to get optimal stack distribution and blind suggestions. Mobile-first UI.</p>
+
+  <div class="flex">
+    <div class="col" style="min-width:260px">
+      <label for="players">Players</label>
+      <input id="players" type="number" min="1" value="6" />
+
+      <label for="buyin">Buy-in per player ($)</label>
+      <input id="buyin" type="number" min="1" step="1" value="200" />
+
+      <label for="sb">Small Blind (optional)</label>
+      <input id="sb" type="number" min="0" placeholder="e.g. 1" />
+
+      <label for="bb">Big Blind (optional)</label>
+      <input id="bb" type="number" min="0" placeholder="e.g. 2" />
+    </div>
+
+    <div class="col">
+      <label>Chips — enter quantity for each denomination <small>※ empty = 0</small></label>
+      <table class="chip-table" id="chipTable">
+        <thead><tr><th>Denom ($)</th><th>Count</th><th>Total</th></tr></thead>
+        <tbody id="chipBody"></tbody>
+      </table>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+        <button id="addDenom">Add denom</button>
+        <button id="resetDenoms" class="secondary">Reset defaults</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:12px" class="controls">
+    <button id="calc" style="flex:1">Calculate stacks</button>
+  </div>
+
+  <div id="output" class="result" style="display:none"></div>
+
+  <footer>Tip: add this page to your home screen for quick access on mobile.</footer>
+
+<script>
+/* --- Data + render --- */
+let defaultDenoms = [1,5,10,25,50,100,500,1000];
+let defaultCounts = [40,20,20,20,10,10,6,2];
+let chipBody = document.getElementById('chipBody');
+
+function renderChipRows(denoms){
+  chipBody.innerHTML = '';
+  denoms.forEach((d, i) => {
+    let tr = document.createElement('tr');
+    // we add data-label attributes so CSS mobile view can show card-like labels
+    tr.innerHTML = `
+      <td data-label="Denomination">$<input class="denom" data-i="${i}" type="number" value="${d}" min="1" style="width:70px;display:inline-block;margin-left:6px" /></td>
+      <td data-label="Count"><input class="count" data-i="${i}" type="number" min="0" value="${defaultCounts[i] || 0}" /></td>
+      <td data-label="Total" class="value total" data-i="${i}">$0</td>
+    `;
+    chipBody.appendChild(tr);
+  })
+  updateTotalsDisplay();
+}
+
+renderChipRows(defaultDenoms);
+
+/* Buttons */
+document.getElementById('addDenom').addEventListener('click', () => {
+  defaultDenoms.push(100);
+  defaultCounts.push(0);
+  renderChipRows(defaultDenoms);
+});
+document.getElementById('resetDenoms').addEventListener('click', () => {
+  defaultDenoms = [1,5,10,25,50,100,500,1000];
+  defaultCounts = [40,20,20,20,10,10,6,2];
+  renderChipRows(defaultDenoms);
+});
+chipBody.addEventListener('input', updateTotalsDisplay);
+
+function updateTotalsDisplay(){
+  let rows = chipBody.querySelectorAll('tr');
+  rows.forEach((tr, idx) => {
+    let denom = Number(tr.querySelector('.denom').value) || 0;
+    let count = Number(tr.querySelector('.count').value) || 0;
+    tr.querySelector('.total').textContent = "$" + (denom * count).toLocaleString();
+  })
+}
+
+/* Calculation logic (same as before, with labels preserved) */
+document.getElementById('calc').addEventListener('click', runCalc);
+
+function runCalc(){
+  const players = Math.max(1, Math.floor(Number(document.getElementById('players').value) || 1));
+  const buyin = Math.max(0, Number(document.getElementById('buyin').value) || 0);
+  let sb = Number(document.getElementById('sb').value) || null;
+  let bbInput = Number(document.getElementById('bb').value) || null;
+
+  let denomEls = Array.from(document.querySelectorAll('.denom'));
+  let countEls = Array.from(document.querySelectorAll('.count'));
+  let denoms = denomEls.map(e => Math.max(1, Math.floor(Number(e.value) || 0)));
+  let counts = countEls.map(e => Math.max(0, Math.floor(Number(e.value) || 0)));
+
+  let totalPool = denoms.reduce((s, d, i) => s + d * counts[i], 0);
+  let neededTotal = buyin * players;
+
+  function suggestStartBB(buyinPer){
+    if (buyinPer >= 2000) return 200;
+    if (buyinPer >= 800) return 100;
+    if (buyinPer >= 300) return 50;
+    return 25;
+  }
+  let suggestedStartBB = suggestStartBB(buyin);
+  let rawBig = (suggestedStartBB>0) ? (buyin / suggestedStartBB) : 1;
+
+  function roundToChipFloor(value, denomsArray){
+    denomsArray = denomsArray.slice().map(v=>Math.max(1,Math.floor(v))).sort((a,b)=>a-b);
+    if (denomsArray.length===0) return Math.max(1, Math.floor(value));
+    let cand = denomsArray.filter(d => d <= Math.max(1, Math.floor(value)));
+    if (cand.length>0) return cand[cand.length-1];
+    return denomsArray[0];
+  }
+
+  let bigSuggested = bbInput || roundToChipFloor(rawBig, denoms);
+  let smallSuggested = sb || Math.max(1, Math.round(bigSuggested/2));
+
+  function allocatePerPlayer(targetValuePer, denomsArray, countsArray, players){
+    let items = denomsArray.map((d,i)=>({d:d, totalCount:countsArray[i], idx:i}))
+                  .sort((a,b)=>b.d - a.d);
+    let perPlayer = items.map(it => ({d:it.d, take:0}));
+    let remaining = targetValuePer;
+
+    for (let it of items){
+      let maxEach = Math.floor(it.totalCount / players);
+      if (maxEach <= 0) continue;
+      let needEach = Math.floor(remaining / it.d);
+      let giveEach = Math.min(maxEach, needEach);
+      perPlayer[items.indexOf(it)] = {d: it.d, take: giveEach, origIdx: it.idx};
+      remaining -= giveEach * it.d;
+    }
+    if (remaining > 0){
+      let itemsAsc = items.slice().sort((a,b)=>a.d - b.d);
+      for (let it of itemsAsc){
+        if (remaining <= 0) break;
+        let maxEach = Math.floor(it.totalCount / players);
+        let already = perPlayer[items.indexOf(it)].take || 0;
+        while(already < maxEach && remaining >= it.d){
+          already++;
+          remaining -= it.d;
+        }
+        perPlayer[items.indexOf(it)].take = already;
+      }
+    }
+    let res = Array(denomsArray.length).fill(0);
+    for (let i=0;i<items.length;i++){
+      let p = perPlayer[i];
+      if (p && p.origIdx !== undefined) res[p.origIdx] = p.take;
+    }
+    return {perPlayerCounts: res, remainderPerPlayer: remaining};
+  }
+
+  let possiblePerPlayer = Math.floor(totalPool / players);
+  let targetAttempt = (totalPool >= neededTotal) ? buyin : possiblePerPlayer;
+  let allocation = allocatePerPlayer(targetAttempt, denoms, counts, players);
+
+  let out = document.getElementById('output');
+  out.style.display = 'block';
+  out.innerHTML = '';
+
+  let sumHtml = `<strong>Summary</strong>
+  <ul>
+    <li>Players: <b>${players}</b></li>
+    <li>Buy-in per player: <b>$${buyin.toLocaleString()}</b></li>
+    <li>Total chips pool: <b>$${totalPool.toLocaleString()}</b></li>
+    <li>Required total (buy-in × players): <b>$${neededTotal.toLocaleString()}</b></li>
+  </ul>`;
+  out.insertAdjacentHTML('beforeend', sumHtml);
+
+  if (totalPool < neededTotal){
+    out.insertAdjacentHTML('beforeend', `<div class="warn">Warning: Total chip pool is less than required buy-ins. Max per player (equal share): <b>$${possiblePerPlayer.toLocaleString()}</b></div>`);
+  } else {
+    out.insertAdjacentHTML('beforeend', `<div class="ok">Sufficient chips to cover requested buy-ins. Proposal below.</div>`);
+  }
+
+  out.insertAdjacentHTML('beforeend', `<h3>Blinds & BB</h3>
+    <p>Suggested start: <b>${suggestedStartBB} BB</b></p>
+    <p>Estimated Big Blind = <b>$${rawBig.toFixed(2)}</b> → rounded to chip: <b>$${bigSuggested}</b></p>
+    <p>Estimated Small Blind = <b>$${smallSuggested}</b></p>
+  `);
+
+  out.insertAdjacentHTML('beforeend', `<h3>Per-player chip allocation (equal)</h3>`);
+  let allocTable = document.createElement('table');
+  allocTable.style.width = '100%';
+  allocTable.innerHTML = `<thead><tr><th>Denom</th><th>Each</th><th>Value</th><th>Pool</th></tr></thead>`;
+  let tbody = document.createElement('tbody');
+
+  let perPlayerCounts = allocation.perPlayerCounts;
+  for (let i=0;i<denoms.length;i++){
+    let d = denoms[i];
+    let take = perPlayerCounts[i] || 0;
+    let totalOfDenom = counts[i] || 0;
+    let val = take * d;
+    let tr = document.createElement('tr');
+    tr.innerHTML = `<td>$${d}</td><td>${take}</td><td>$${val}</td><td>${totalOfDenom}</td>`;
+    tbody.appendChild(tr);
+  }
+  allocTable.appendChild(tbody);
+  out.appendChild(allocTable);
+
+  let achieved = perPlayerCounts.reduce((s, c, i) => s + (c * denoms[i]), 0);
+  let remainder = allocation.remainderPerPlayer;
+  out.insertAdjacentHTML('beforeend', `<p>Per-player total based on allocation: <b>$${achieved}</b></p>`);
+  if (remainder > 0){
+    out.insertAdjacentHTML('beforeend', `<div class="warn">Small remainder of $${remainder} remains per player (use small chips to top up or adjust BB/buy-in).</div>`);
+  }
+
+  let bbValue = bigSuggested;
+  let bbInStacks = (achieved / bbValue).toFixed(1);
+  out.insertAdjacentHTML('beforeend', `<h3>BBs</h3>
+    <p>Stack depth: <b>${bbInStacks} BB</b> ( $${achieved} ÷ Big $${bbValue} )</p>
+    <p style="color:var(--muted)">To change BB, edit Big Blind field and recalc.</p>
+  `);
+
+  let suggestions = '<h3>Next actions</h3><ul>';
+  if (totalPool < neededTotal){
+    suggestions += `<li>Short on chips: reduce players, source extra chips, or lower buy-in to <$${Math.floor(possiblePerPlayer)}>.</li>`;
+  } else {
+    suggestions += `<li>Use this allocation and top up small remainders manually with $1 chips.</li>`;
+  }
+  suggestions += `<li>If you want deeper play, reduce BB or increase starting stacks.</li>`;
+  suggestions += '</ul>';
+  out.insertAdjacentHTML('beforeend', suggestions);
+
+  out.insertAdjacentHTML('beforeend', `<details style="margin-top:8px"><summary>Internal data (debug)</summary>
+    <div class="mono" style="margin-top:8px">totalPool=${totalPool}
+possiblePerPlayer=${possiblePerPlayer}
+achievedPerPlayer=${achieved}
+rawBig=${rawBig.toFixed(2)}
+bigSuggested=${bigSuggested}
+smallSuggested=${smallSuggested}</div>
+  </details>`);
+}
+
+/* initial totals update */
+updateTotalsDisplay();
+</script>
+</body>
+</html>
