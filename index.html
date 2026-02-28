@@ -3,36 +3,36 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Poker Stack Planner — exact buy-in match</title>
+<title>Poker Stack Planner — exact match + suggestions</title>
 <style>
-  :root{--bg:#fbfbfc;--muted:#666;--accent:#0a66cc;--warn:#fff0f2;--card:#fff}
-  html,body{height:100%}
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Hiragino Kaku Gothic ProN","Meiryo",sans-serif;margin:14px;background:var(--bg);color:#111}
-  h1{font-size:1.05rem;margin:0 0 8px}
-  .hint{color:var(--muted);font-size:.95rem;margin-bottom:12px}
-  label{display:block;font-weight:700;margin-top:10px}
-  input[type="number"], button{padding:10px;border:1px solid #e6e6e6;border-radius:8px;font-size:1rem}
-  input[type="number"]{width:160px}
-  .chip-table{width:100%;border-collapse:collapse;margin-top:8px}
-  .chip-table th,.chip-table td{padding:8px;border-bottom:1px solid #eee;text-align:left}
-  .result{margin-top:16px;padding:12px;border-radius:10px;background:var(--card);border:1px solid #eee}
-  .warn{color:#a00;background:var(--warn);padding:10px;border-radius:8px;margin-top:8px;border:1px solid #f5c}
-  .mono{font-family:monospace;background:#f7f7f7;padding:6px;border-radius:6px;display:inline-block}
-  .actions{margin-top:12px}
-  .btn{background:var(--accent);color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer}
-  .btn-secondary{background:#888;color:#fff;border:0;padding:8px 10px;border-radius:8px}
-  @media (max-width:720px){ input[type="number"]{width:100%} }
+:root{--bg:#fbfbfc;--muted:#666;--accent:#0a66cc;--warn:#fff0f2;--card:#fff}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Hiragino Kaku Gothic ProN","Meiryo",sans-serif;margin:14px;background:var(--bg);color:#111}
+h1{font-size:1.05rem;margin:0 0 8px}
+.hint{color:var(--muted);font-size:.95rem;margin-bottom:12px}
+label{display:block;font-weight:700;margin-top:10px}
+input[type="number"],button{padding:10px;border:1px solid #e6e6e6;border-radius:8px;font-size:1rem}
+input[type="number"]{width:160px}
+.chip-table{width:100%;border-collapse:collapse;margin-top:8px}
+.chip-table th,.chip-table td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+.result{margin-top:16px;padding:12px;border-radius:10px;background:var(--card);border:1px solid #eee}
+.warn{color:#a00;background:var(--warn);padding:10px;border-radius:8px;margin-top:8px;border:1px solid #f5c}
+.mono{font-family:monospace;background:#f7f7f7;padding:6px;border-radius:6px;display:inline-block}
+.actions{margin-top:12px}
+.btn{background:var(--accent);color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer}
+.btn-secondary{background:#888;color:#fff;border:0;padding:8px 10px;border-radius:8px}
+.suggestions{margin-top:10px;padding:10px;border-radius:8px;background:#fbfbfb;border:1px solid #eee}
+@media (max-width:720px){ input[type="number"]{width:100%} }
 </style>
 </head>
 <body>
-  <h1>Poker Stack Planner — exact buy-in match</h1>
-  <div class="hint">Enter players and target buy-in. The tool will try to produce a per-player chip distribution that yields the exact buy-in amount (no approximation). If impossible, you'll be told.</div>
+  <h1>Poker Stack Planner — exact match + suggestions</h1>
+  <div class="hint">Enter players, target buy-in and chip inventory. Tool finds a realistic mixed-denom per-player stack that exactly matches the buy-in (cent-precision or a "nice" divisor). If not possible, suggestions (nearby buy-ins and ±1 player) are shown.</div>
 
   <label>Players</label>
   <input id="players" type="number" min="1" value="6"/>
 
   <label>Target buy-in per player ($)</label>
-  <input id="actualBuyin" type="number" min="0" step="0.01" value="20"/>
+  <input id="actualBuyin" type="number" min="0" step="0.01" value="15"/>
 
   <label>Small blind (optional)</label>
   <input id="sbInput" type="number" min="0" placeholder="e.g. 1"/>
@@ -57,15 +57,14 @@
   <div id="output" class="result" style="display:none"></div>
 
 <script>
-/* ---------- internal settings ---------- */
-const NICE_DIVISORS = [2,5,10,20,50,100,200]; // preferred "nice" divisors
-const PREFERRED_PIECE_COUNTS = [10,15,20,25,30]; // prefer these but we will search all feasible counts
-/* ---------------------------------------- */
+/* ---------- config ---------- */
+const NICE_DIVISORS = [2,5,10,20,50,100,200];
+const PREFERRED_PIECE_COUNTS = [10,15,20,25,30];
+/* --------------------------- */
 
-/* defaults: counts all 100 */
-let defaultDenoms = [1,2,5,25,50,100];
-let defaultCounts = [100,100,100,100,100,100];
-
+/* defaults */
+let defaultDenoms = [1,2,5,10,25,50,100];
+let defaultCounts = [100,100,100,100,100,100,100];
 const chipBody = document.getElementById('chipBody');
 
 function renderChipRows(denoms){
@@ -84,12 +83,12 @@ function renderChipRows(denoms){
 }
 renderChipRows(defaultDenoms);
 
-/* handlers */
+/* UI handlers */
 document.getElementById('addDenom').addEventListener('click', ()=>{
   defaultDenoms.push(10); defaultCounts.push(100); renderChipRows(defaultDenoms);
 });
 document.getElementById('resetDenoms').addEventListener('click', ()=>{
-  defaultDenoms = [1,2,5,25,50,100]; defaultCounts = [100,100,100,100,100,100]; renderChipRows(defaultDenoms);
+  defaultDenoms = [1,2,5,10,25,50,100]; defaultCounts = [100,100,100,100,100,100,100]; renderChipRows(defaultDenoms);
 });
 chipBody.addEventListener('click', (e)=>{
   if(e.target.classList.contains('del')){
@@ -101,91 +100,181 @@ chipBody.addEventListener('input', updateTotalsDisplay);
 
 function updateTotalsDisplay(){
   let rows = chipBody.querySelectorAll('tr');
+  let totalPieces = 0, totalFace = 0;
   rows.forEach((tr,idx)=>{
     let denom = Number(tr.querySelector('.denom').value) || 0;
     let count = Number(tr.querySelector('.count').value) || 0;
     tr.querySelector('.total').textContent = (denom * count).toLocaleString();
+    totalPieces += count;
+    totalFace += denom * count;
   });
 }
 
-/* allocation helpers */
-
-/* try to allocate exactly perPlayerPieces per player, favoring big denominations first */
-function allocateByPieces(perPlayerPieces, denoms, counts, players){
-  // compute per-player maximums
-  let perPlayerMax = denoms.map((d,i)=>Math.floor(counts[i]/players));
-  let maxSum = perPlayerMax.reduce((s,v)=>s+v,0);
-  if(maxSum < perPlayerPieces) return null;
-
-  // greedy large->small
-  let order = denoms.map((d,i)=>({d:d,i:i})).sort((a,b)=>b.d - a.d);
-  let take = Array(denoms.length).fill(0);
-  let remain = perPlayerPieces;
-  for(let it of order){
-    let idx = it.i;
-    let can = perPlayerMax[idx];
-    let use = Math.min(can, remain);
-    take[idx] = use;
-    remain -= use;
-    if(remain === 0) break;
-  }
-  if(remain>0) return null;
-  let faceTotal = take.reduce((s,c,i)=> s + c * denoms[i], 0);
-  return {perPlayerCounts: take, faceTotal: faceTotal};
-}
-
-/* search algorithm:
-   - build feasible per-player pieces range: from minPossible (1) to maxPossible (sum floor(count/players))
-   - prefer PREFERRED_PIECE_COUNTS order, but search full range and return first candidate that yields exact match
-   - exact match test:
-       * cent-precision: actualBuyin_cents % faceTotal === 0  (=> 1 face = N cents integer)
-       * OR nice divisor: D = faceTotal*100 / actualBuyin_cents  is integer AND in NICE_DIVISORS
-*/
-function findExactDistribution(denoms, counts, players, actualBuyin){
-  const actualCents = Math.round(actualBuyin * 100);
-  // prepare per-player max sum
-  let perPlayerMaxArr = denoms.map((d,i)=>Math.floor(counts[i]/players));
-  let maxSum = perPlayerMaxArr.reduce((s,v)=>s+v,0);
-  if(maxSum <= 0) return null;
-
-  // build candidate order: first preferred list that are <= maxSum, then remaining ascending
-  let candidates = [];
-  for(let v of PREFERRED_PIECE_COUNTS) if(v <= maxSum) candidates.push(v);
-  for(let v=1; v<=maxSum; v++){
-    if(!candidates.includes(v)) candidates.push(v);
-  }
-
-  for(let piecesTarget of candidates){
-    let alloc = allocateByPieces(piecesTarget, denoms, counts, players);
-    if(!alloc) continue;
-    let faceTotal = alloc.faceTotal;
-    if(faceTotal <= 0) continue;
-
-    // 1) cent-precision check: is actualCents divisible by faceTotal?
-    if(actualCents > 0 && actualCents % faceTotal === 0){
-      let centsPerFace = actualCents / faceTotal; // integer
-      return {type:'cent', piecesTarget, perPlayerCounts:alloc.perPlayerCounts, faceTotal, centsPerFace};
+/* bounded knapsack helper (same as previous version) */
+function bestCombinationForPieces(denoms, counts, players, piecesTarget){
+  const n = denoms.length;
+  let perMax = Array.from({length:n}, (_,i)=>Math.floor(counts[i]/players));
+  const maxSum = perMax.reduce((s,v)=>s+v,0);
+  if(piecesTarget > maxSum) return null;
+  const NEG = -1e12;
+  let dp = new Array(piecesTarget+1).fill(NEG);
+  let parent = new Array(piecesTarget+1).fill(null);
+  dp[0] = 0;
+  for(let i=0;i<n;i++){
+    let val = denoms[i];
+    let cnt = perMax[i];
+    if(cnt <= 0) continue;
+    let k = 1;
+    let parts = [];
+    while(cnt > 0){
+      let take = Math.min(k, cnt);
+      parts.push(take);
+      cnt -= take;
+      k *= 2;
     }
-
-    // 2) nice divisor check: D = faceTotal*100 / actualCents  -> integer in NICE_DIVISORS
-    if(actualCents > 0){
-      let numerator = faceTotal * 100;
-      if(numerator % actualCents === 0){
-        let D = numerator / actualCents;
-        if(Number.isInteger(D) && NICE_DIVISORS.includes(D)){
-          return {type:'divisor', piecesTarget, perPlayerCounts:alloc.perPlayerCounts, faceTotal, divisor:D};
+    for(let p of parts){
+      let it = p;
+      let valAdd = it * val;
+      for(let used = piecesTarget; used >= it; used--){
+        if(dp[used - it] > NEG){
+          let cand = dp[used - it] + valAdd;
+          if(cand > dp[used]){
+            dp[used] = cand;
+            parent[used] = {prev: used - it, denom: i, taken: it, next: parent[used - it]};
+          }
         }
       }
     }
   }
+  if(dp[piecesTarget] <= NEG) return null;
+  let takenPer = new Array(n).fill(0);
+  let cur = piecesTarget;
+  while(cur > 0 && parent[cur]){
+    let node = parent[cur];
+    takenPer[node.denom] += node.taken;
+    cur = node.prev;
+  }
+  return {perPlayerCounts: takenPer, faceTotal: dp[piecesTarget]};
+}
 
-  // nothing found
+/* choose exact match (cent or nice divisor) */
+function chooseExactMatch(faceTotal, actualBuyin){
+  const actualCents = Math.round(actualBuyin * 100);
+  if(actualCents <= 0) return null;
+  if(actualCents % faceTotal === 0){
+    return {mode:'cent', centsPerFace: actualCents / faceTotal};
+  }
+  let numerator = faceTotal * 100;
+  if(numerator % actualCents === 0){
+    let D = numerator / actualCents;
+    if(Number.isInteger(D) && NICE_DIVISORS.includes(D)){
+      return {mode:'divisor', divisor: D};
+    }
+  }
   return null;
 }
 
-/* main */
+/* search distribution (players fixed) */
+function findExactDistributionForPlayers(denoms, counts, players, actualBuyin){
+  let perPlayerMaxArr = denoms.map((d,i)=>Math.floor(counts[i]/players));
+  let maxSum = perPlayerMaxArr.reduce((s,v)=>s+v,0);
+  if(maxSum <= 0) return null;
+  let candidates = [];
+  for(let v of PREFERRED_PIECE_COUNTS) if(v <= maxSum) candidates.push(v);
+  for(let v=1; v<=maxSum; v++) if(!candidates.includes(v)) candidates.push(v);
+  for(let piecesTarget of candidates){
+    let best = bestCombinationForPieces(denoms, counts, players, piecesTarget);
+    if(!best) continue;
+    let match = chooseExactMatch(best.faceTotal, actualBuyin);
+    if(match) return {piecesTarget, perPlayerCounts: best.perPlayerCounts, faceTotal: best.faceTotal, match};
+  }
+  return null;
+}
+
+/* gather alternative suggestions:
+   - try player counts: players-1, players+1 (if >=1)
+   - for achievable faceTotals (from best combos) compute implied buyins with NICE_DIVISORS,
+     keep those within [0.5*target, 2*target], sort by closeness, unique, limit 5.
+*/
+function gatherSuggestions(denoms, counts, players, actualBuyin){
+  const suggestions = [];
+  const rangePlayers = [players];
+  if(players > 1) rangePlayers.push(players-1);
+  rangePlayers.push(players+1);
+
+  const actual = actualBuyin;
+  const minAccept = actual * 0.5;
+  const maxAccept = actual * 2.0;
+
+  // collect faceTotals from best combos across piece targets for each candidate player count
+  let faceTotals = []; // {players: p, faceTotal: ft, piecesTarget}
+  for(let p of rangePlayers){
+    let perPlayerMaxArr = denoms.map((d,i)=>Math.floor(counts[i]/p));
+    let maxSum = perPlayerMaxArr.reduce((s,v)=>s+v,0);
+    if(maxSum <= 0) continue;
+    // try a reasonable set of pieceTargets (preferred + some range)
+    let candidates = [];
+    for(let v of PREFERRED_PIECE_COUNTS) if(v <= maxSum) candidates.push(v);
+    for(let v=1; v<=maxSum; v++) if(!candidates.includes(v)) candidates.push(v);
+    for(let piecesTarget of candidates){
+      let best = bestCombinationForPieces(denoms, counts, p, piecesTarget);
+      if(!best) continue;
+      faceTotals.push({players:p, faceTotal: best.faceTotal, piecesTarget});
+    }
+  }
+
+  // from faceTotals compute implied buyins using NICE_DIVISORS and keep those in allowed range
+  let candMap = new Map();
+  for(let item of faceTotals){
+    let ft = item.faceTotal;
+    if(ft <= 0) continue;
+    for(let D of NICE_DIVISORS){
+      let implied = ft / D;
+      // round to cents
+      let impliedRounded = Math.round(implied * 100) / 100;
+      if(impliedRounded >= minAccept && impliedRounded <= maxAccept){
+        // uniqueness key
+        let key = impliedRounded + '|' + item.players + '|' + D;
+        if(!candMap.has(key)){
+          candMap.set(key, {implied: impliedRounded, players: item.players, divisor: D, faceTotal: ft, piecesTarget: item.piecesTarget});
+        }
+      }
+    }
+    // also consider cent-precision exact possibilities: implied = ft * centsPerFace /100 where centsPerFace integer
+    // But that generates many tiny fractions; skip explicit generation because cent-precision can always match any actual when cents divisible by ft.
+  }
+
+  // convert map to array and sort by closeness to actual
+  let arr = Array.from(candMap.values());
+  arr.sort((a,b)=> Math.abs(a.implied - actual) - Math.abs(b.implied - actual));
+
+  // keep top 5 and format as suggestions
+  for(let i=0;i<Math.min(5,arr.length); i++){
+    let c = arr[i];
+    suggestions.push({
+      type: 'buyin',
+      suggestedBuyin: c.implied,
+      players: c.players,
+      divisor: c.divisor,
+      faceTotal: c.faceTotal,
+      info: `Use ${c.players} players and divisor ${c.divisor} → face_total ${c.faceTotal} ⇒ $${c.implied.toFixed(2)}`
+    });
+  }
+
+  // also add +/-1 player suggestion even if no buyin found (but only if different)
+  if(!suggestions.some(s=>s.players === players-1) && players>1){
+    suggestions.push({type:'players', action:'decrease', players: players-1, info:`Try ${players-1} players`});
+  }
+  if(!suggestions.some(s=>s.players === players+1)){
+    suggestions.push({type:'players', action:'increase', players: players+1, info:`Try ${players+1} players`});
+  }
+
+  return suggestions;
+}
+
+/* main calculate handler */
 document.getElementById('calc').addEventListener('click', ()=>{
-  const players = Math.max(1, Math.floor(Number(document.getElementById('players').value) || 1));
+  const inputPlayers = Math.max(1, Math.floor(Number(document.getElementById('players').value) || 1));
   const actualBuyin = Math.max(0, Number(document.getElementById('actualBuyin').value) || 0);
   const sbInput = Number(document.getElementById('sbInput').value) || null;
   const bbInput = Number(document.getElementById('bbInput').value) || null;
@@ -196,86 +285,70 @@ document.getElementById('calc').addEventListener('click', ()=>{
   let denoms = denomEls.map(e=>Math.max(1, Math.floor(Number(e.value) || 0)));
   let counts = countEls.map(e=>Math.max(0, Math.floor(Number(e.value) || 0)));
 
-  // totals info
+  // totals
   let totalPieces = counts.reduce((s,c)=>s+c,0);
   let totalFace = denoms.reduce((s,d,i)=> s + d*counts[i], 0);
-
-  // attempt to find exact distribution
-  let result = findExactDistribution(denoms, counts, players, actualBuyin);
 
   const out = document.getElementById('output');
   out.style.display = 'block';
   out.innerHTML = '';
-
-  // show inventory summary
   out.insertAdjacentHTML('beforeend', `<p class="hint">Total pieces available: <strong>${totalPieces.toLocaleString()}</strong> · Total face value available: <strong>${totalFace.toLocaleString()}</strong></p>`);
 
-  if(!result){
-    out.insertAdjacentHTML('beforeend', `<div class="warn"><strong>No exact distribution found.</strong> Try one of:
-      <ul>
-        <li>Add more chips (increase counts)</li>
-        <li>Reduce player count</li>
-        <li>Change the target buy-in</li>
-      </ul>
-    </div>`);
-    out.insertAdjacentHTML('beforeend', `<details style="margin-top:8px"><summary>Debug info</summary>
-      <div class="mono" style="margin-top:8px">
-totalFace=${totalFace}
-totalPieces=${totalPieces}
-    </div></details>`);
+  // try exact distribution for current players
+  let result = findExactDistributionForPlayers(denoms, counts, inputPlayers, actualBuyin);
+  if(result){
+    // show per-player counts (no piecesTarget label)
+    let html = '<strong>Per-player stack (by face)</strong><ul style="margin-top:8px">';
+    for(let i=0;i<result.perPlayerCounts.length;i++){
+      html += `<li>${denoms[i]} : <b>${result.perPlayerCounts[i]}</b> pcs</li>`;
+    }
+    html += '</ul>';
+    out.insertAdjacentHTML('beforeend', html);
+    out.insertAdjacentHTML('beforeend', `<p style="margin-top:8px"><strong>Per-player total (face value):</strong> ${result.faceTotal.toLocaleString()}</p>`);
+    if(result.match.mode === 'cent'){
+      out.insertAdjacentHTML('beforeend', `<p><strong>Exact match (cent-precision)</strong>: 1 face unit = <b>${result.match.centsPerFace}</b> cents → per-player = <b>$${((result.faceTotal * result.match.centsPerFace)/100).toFixed(2)}</b></p>`);
+    } else {
+      out.insertAdjacentHTML('beforeend', `<p><strong>Exact match (nice divisor)</strong>: divide face_total by <b>${result.match.divisor}</b> → per-player = <b>$${(result.faceTotal / result.match.divisor).toFixed(2)}</b> (exact)</p>`);
+    }
+    out.insertAdjacentHTML('beforeend', `<p class="hint">Target buy-in: $${actualBuyin.toFixed(2)}</p>`);
+    // blinds suggestion (same as before)
+    const targetBB = 30;
+    let rawBig = result.faceTotal / Math.max(1, targetBB);
+    let sortedDenoms = denoms.slice().map(v=>Math.max(1,v)).filter(Boolean).sort((a,b)=>a-b);
+    function denomFloor(val){
+      let cand = sortedDenoms.filter(d=>d <= Math.max(1, Math.floor(val)));
+      return cand.length ? cand[cand.length-1] : (sortedDenoms[0] || 1);
+    }
+    let bigNominal = denomFloor(rawBig);
+    let smallNominal = Math.max(1, Math.round(bigNominal/2));
+    let bbDepth = (result.faceTotal / Math.max(1, bigNominal)).toFixed(1);
+    const bbDisplay = bbInput ? bbInput : `${bigNominal} (suggested)`;
+    const sbDisplay = sbInput ? sbInput : `${smallNominal} (suggested)`;
+    out.insertAdjacentHTML('beforeend', `<h3 style="margin-top:10px">Blinds (face)</h3>
+      <p>Big blind: <strong>${bbDisplay}</strong> · Small blind: <strong>${sbDisplay}</strong></p>
+      <p class="hint">Stack depth: <strong>${bbDepth} BB</strong> (${result.faceTotal} ÷ ${bigNominal})</p>`);
+    out.insertAdjacentHTML('beforeend', `<details style="margin-top:8px"><summary>Debug</summary><div class="mono" style="margin-top:8px">foundType=${result.match.mode} faceTotal=${result.faceTotal}</div></details>`);
     return;
   }
 
-  // Show chosen distribution
-  out.insertAdjacentHTML('beforeend', `<strong>Selected per-player pieces target:</strong> ${result.piecesTarget} pcs<br/><br/>`);
-
-  // per-player list
-  let html = '<strong>Per-player stack (by face)</strong><ul style="margin-top:8px">';
-  for(let i=0;i<result.perPlayerCounts.length;i++){
-    html += `<li>${denoms[i]} : <b>${result.perPlayerCounts[i]}</b> pcs</li>`;
+  // No exact distribution for current players — gather suggestions (players +/-1 and buy-in alternatives)
+  let suggestions = gatherSuggestions(denoms, counts, inputPlayers, actualBuyin);
+  out.insertAdjacentHTML('beforeend', `<div class="warn"><strong>No exact distribution found.</strong></div>`);
+  out.insertAdjacentHTML('beforeend', `<div class="suggestions"><strong>Suggestions</strong><ul id="suggestList" style="margin-top:8px"></ul></div>`);
+  const listEl = document.getElementById('suggestList');
+  if(suggestions.length === 0){
+    listEl.insertAdjacentHTML('beforeend', `<li>No straightforward suggestions — try adding chips, lowering players, or changing the target buy-in more widely.</li>`);
+  } else {
+    suggestions.forEach(s=>{
+      if(s.type === 'buyin'){
+        listEl.insertAdjacentHTML('beforeend', `<li>Try target buy-in <strong>$${s.suggestedBuyin.toFixed(2)}</strong> with <strong>${s.players}</strong> players (face_total ${s.faceTotal}, divisor ${s.divisor}) — ${s.info}</li>`);
+      } else if(s.type === 'players'){
+        listEl.insertAdjacentHTML('beforeend', `<li>${s.info} (try running calculation after changing players)</li>`);
+      }
+    });
   }
-  html += `</ul>`;
-  out.insertAdjacentHTML('beforeend', html);
-
-  // face total
-  out.insertAdjacentHTML('beforeend', `<p style="margin-top:8px"><strong>Per-player total (face value):</strong> ${result.faceTotal.toLocaleString()}</p>`);
-
-  if(result.type === 'cent'){
-    // cents per face exact
-    out.insertAdjacentHTML('beforeend', `<p><strong>Exact match (cent-precision)</strong>: 1 face unit = <b>${result.centsPerFace}</b> cents → per-player = <b>$${((result.faceTotal*result.centsPerFace)/100).toFixed(2)}</b></p>`);
-  } else if(result.type === 'divisor'){
-    out.insertAdjacentHTML('beforeend', `<p><strong>Exact match (nice divisor)</strong>: divide face_total by <b>${result.divisor}</b> → per-player = <b>$${(result.faceTotal / result.divisor).toFixed(2)}</b> (exact)</p>`);
-  }
-
-  // show how close to target (should be exact)
-  out.insertAdjacentHTML('beforeend', `<p class="small">Target buy-in: $${actualBuyin.toFixed(2)}</p>`);
-
-  // Blinds display: prefer user-specified else suggest
-  const targetBB = 30;
-  let rawBig = result.faceTotal / Math.max(1, targetBB);
-  let sortedDenoms = denoms.slice().map(v=>Math.max(1,v)).filter(Boolean).sort((a,b)=>a-b);
-  function denomFloor(val){
-    let cand = sortedDenoms.filter(d=>d <= Math.max(1, Math.floor(val)));
-    return cand.length ? cand[cand.length-1] : (sortedDenoms[0] || 1);
-  }
-  let bigNominal = denomFloor(rawBig);
-  let smallNominal = Math.max(1, Math.round(bigNominal/2));
-  let bbDepth = (result.faceTotal / Math.max(1, bigNominal)).toFixed(1);
-  const bbDisplay = bbInput ? bbInput : `${bigNominal} (suggested)`;
-  const sbDisplay = sbInput ? sbInput : `${smallNominal} (suggested)`;
-  out.insertAdjacentHTML('beforeend', `<h3 style="margin-top:10px">Blinds (face)</h3>
-    <p>Big blind: <strong>${bbDisplay}</strong> · Small blind: <strong>${sbDisplay}</strong></p>
-    <p class="small">Stack depth: <strong>${bbDepth} BB</strong> (${result.faceTotal} ÷ ${bigNominal})</p>`);
-
-  // collapsed debug
-  out.insertAdjacentHTML('beforeend', `<details style="margin-top:8px"><summary>Debug</summary>
-    <div class="mono" style="margin-top:8px">
-foundType=${result.type}
-piecesTarget=${result.piecesTarget}
-faceTotal=${result.faceTotal}
-    </div></details>`);
+  out.insertAdjacentHTML('beforeend', `<details style="margin-top:8px"><summary>Debug</summary><div class="mono" style="margin-top:8px">totalFace=${totalFace} totalPieces=${totalPieces}</div></details>`);
 });
-
 /* initial totals */
 updateTotalsDisplay();
 </script>
