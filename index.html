@@ -23,7 +23,7 @@
 </head>
 <body>
   <h1>Poker Stack Planner — per-player chip output & conversion</h1>
-  <p class="muted">Outputs per-player chip counts by denomination, nominal total (額面上) and actual $ value + conversion factor.</p>
+  <p class="muted">Outputs per-player chip counts by denomination, Total chips (face value) and actual $ value + conversion factor.</p>
 
   <div class="grid">
     <div>
@@ -49,7 +49,7 @@
             <div class="muted">Total pieces</div><div id="totalPieces" style="font-weight:700">—</div>
           </div>
           <div style="flex:1">
-            <div class="muted">Total nominal (額面上)</div><div id="totalNominal" style="font-weight:700">—</div>
+            <div class="muted">Total chips (face value)</div><div id="totalNominal" style="font-weight:700">—</div>
           </div>
           <div style="flex:1">
             <div class="muted">Equal-share max per player (nominal)</div><div id="maxNominal" style="font-weight:700">—</div>
@@ -202,7 +202,7 @@ document.getElementById('calc').addEventListener('click', () => {
   out.insertAdjacentHTML('beforeend', lines);
 
   // Totals & conversion
-  out.insertAdjacentHTML('beforeend', `<p><strong>Nominal per-player total (額面上):</strong> ${achievedNominal.toLocaleString()}</p>`);
+  out.insertAdjacentHTML('beforeend', `<p><strong>Nominal per-player total (face value):</strong> ${achievedNominal.toLocaleString()}</p>`);
 
   if (conversion !== null){
     // show both 1 nominal = $X and multiplier form
