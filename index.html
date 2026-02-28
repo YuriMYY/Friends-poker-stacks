@@ -3,364 +3,1174 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Poker Stack Planner — exact buy-in (mixed, balanced)</title>
+<title>Poker Stack Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
 <style>
-:root{--bg:#fbfbfc;--muted:#666;--accent:#0a66cc;--warn:#fff0f2;--card:#fff}
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Hiragino Kaku Gothic ProN","Meiryo",sans-serif;margin:14px;background:var(--bg);color:#111}
-h1{font-size:1.05rem;margin:0 0 8px}
-.hint{color:var(--muted);font-size:.95rem;margin-bottom:12px}
-label{display:block;font-weight:700;margin-top:10px}
-input[type="number"],button{padding:10px;border:1px solid #e6e6e6;border-radius:8px;font-size:1rem}
-input[type="number"]{width:160px}
-.chip-table{width:100%;border-collapse:collapse;margin-top:8px}
-.chip-table th,.chip-table td{padding:8px;border-bottom:1px solid #eee;text-align:left}
-.result{margin-top:16px;padding:12px;border-radius:10px;background:var(--card);border:1px solid #eee}
-.warn{color:#a00;background:var(--warn);padding:10px;border-radius:8px;margin-top:8px;border:1px solid #f5c}
-.mono{font-family:monospace;background:#f7f7f7;padding:6px;border-radius:6px;display:inline-block}
-.actions{margin-top:12px}
-.btn{background:var(--accent);color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer}
-.btn-secondary{background:#888;color:#fff;border:0;padding:8px 10px;border-radius:8px}
-.suggestions{margin-top:10px;padding:10px;border-radius:8px;background:#fbfbfb;border:1px solid #eee}
-@media (max-width:720px){ input[type="number"]{width:100%} }
+:root {
+  --green-dark: #0d2818;
+  --green-mid: #1a4a2e;
+  --green-felt: #1e5c38;
+  --green-light: #2d7a50;
+  --gold: #c9a84c;
+  --gold-light: #e8c96a;
+  --gold-dim: #7d6330;
+  --cream: #f5eed8;
+  --cream-dim: #d4c99a;
+  --white: #ffffff;
+  --red: #e04040;
+  --red-dim: #4a1010;
+  --bg: #0a2015;
+  --card-bg: #122a1c;
+  --card-border: #2a5038;
+  --text: #f0e8d0;
+  --text-muted: #9ab89e;
+  --mono: 'DM Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+  --display: 'Playfair Display', serif;
+}
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,168,76,0.12) 0%, transparent 60%),
+    repeating-linear-gradient(
+      0deg, transparent, transparent 40px,
+      rgba(255,255,255,0.015) 40px, rgba(255,255,255,0.015) 41px
+    ),
+    repeating-linear-gradient(
+      90deg, transparent, transparent 40px,
+      rgba(255,255,255,0.015) 40px, rgba(255,255,255,0.015) 41px
+    );
+}
+
+/* ---- HEADER ---- */
+.site-header {
+  text-align: center;
+  padding: 36px 20px 24px;
+  position: relative;
+}
+.site-header::after {
+  content: '';
+  display: block;
+  width: 120px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  margin: 16px auto 0;
+}
+.logo {
+  font-family: var(--display);
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--gold-light);
+  letter-spacing: .02em;
+  line-height: 1.1;
+}
+.logo span { color: var(--cream-dim); font-weight: 700; font-size: 1.4rem; display: block; }
+.tagline { color: var(--text-muted); font-size: .85rem; margin-top: 6px; }
+
+/* ---- LAYOUT ---- */
+.container { max-width: 680px; margin: 0 auto; padding: 0 16px 60px; }
+
+/* ---- CARD ---- */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+.card-title {
+  font-family: var(--display);
+  font-size: 1rem;
+  color: var(--gold);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-title .pip { font-size: 1.2rem; }
+
+/* ---- FORM FIELDS ---- */
+.field { margin-bottom: 14px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+label {
+  display: block;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 6px;
+}
+input[type="number"] {
+  width: 100%;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+  -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+input[type="number"]:focus {
+  border-color: var(--gold-dim);
+  box-shadow: 0 0 0 3px rgba(201,168,76,.15);
+}
+input::placeholder { color: #3d6b4a; }
+
+/* ---- CHIP TABLE ---- */
+.chip-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.chip-table th {
+  font-size: .72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-muted);
+  padding: 0 6px 8px 6px;
+  text-align: left;
+  border-bottom: 1px solid var(--card-border);
+}
+.chip-table th:last-child { width: 40px; }
+.chip-table th.right { text-align: right; }
+.chip-table td {
+  padding: 5px 6px;
+  vertical-align: middle;
+}
+.chip-table td input[type="number"] {
+  font-size: .95rem;
+  padding: 8px 10px;
+  width: 100%;
+}
+.chip-face-display {
+  font-family: var(--mono);
+  font-size: .82rem;
+  color: var(--text-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+.btn-del {
+  background: transparent;
+  border: 1px solid var(--red-dim);
+  color: #e06060;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-size: .85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, border-color .15s;
+}
+.btn-del:hover { background: var(--red-dim); border-color: var(--red); }
+
+.chip-actions { display: flex; gap: 8px; margin-top: 10px; }
+.btn-sm {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-family: var(--sans);
+  font-size: .82rem;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.btn-sm:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+
+/* ---- MAIN BUTTON ---- */
+.btn-calc {
+  width: 100%;
+  background: linear-gradient(135deg, #1a5c35, #2d8a52);
+  border: 1px solid var(--green-light);
+  color: var(--cream);
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  padding: 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  letter-spacing: .04em;
+  transition: transform .15s, box-shadow .15s, background .15s;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+  position: relative;
+  overflow: hidden;
+}
+.btn-calc::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(201,168,76,.12), transparent);
+  pointer-events: none;
+}
+.btn-calc:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
+  background: linear-gradient(135deg, #1e6b3d, #34a05f);
+}
+.btn-calc:active { transform: translateY(0); }
+.btn-calc.loading { opacity: .7; pointer-events: none; }
+
+/* ---- RESULTS ---- */
+#output { animation: fadeUp .3s ease; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.result-success {
+  background: linear-gradient(135deg, #0c2a1a, #133422);
+  border: 1px solid #2d7040;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.result-header {
+  background: linear-gradient(135deg, #1a5c35, #1e6b3d);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.result-header h2 {
+  font-family: var(--display);
+  font-size: 1rem;
+  color: var(--cream);
+}
+.badge-exact {
+  background: var(--gold);
+  color: var(--green-dark);
+  font-size: .7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.stack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  padding: 16px;
+}
+.chip-card {
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.chip-card .face-val {
+  font-family: var(--mono);
+  font-size: .72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.chip-card .piece-count {
+  font-family: var(--mono);
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--gold-light);
+  line-height: 1;
+}
+.chip-card .piece-label { font-size: .72rem; color: var(--text-muted); }
+
+.result-summary {
+  padding: 0 16px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.summary-box {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.summary-box .s-label { font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+.summary-box .s-value {
+  font-family: var(--mono);
+  font-size: 1.15rem;
+  color: var(--cream);
+  margin-top: 2px;
+}
+.summary-box .s-sub { font-size: .72rem; color: var(--gold-dim); margin-top: 2px; }
+.summary-box.highlight { border-color: var(--gold-dim); }
+.summary-box.highlight .s-value { color: var(--gold-light); }
+
+.blinds-section {
+  margin: 0 16px 16px;
+  background: rgba(201,168,76,.06);
+  border: 1px solid var(--gold-dim);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.blinds-section .s-label { font-size: .72rem; color: var(--gold-dim); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+.blinds-row { display: flex; gap: 24px; flex-wrap: wrap; }
+.blind-item { }
+.blind-item .bl-label { font-size: .72rem; color: var(--text-muted); }
+.blind-item .bl-val { font-family: var(--mono); font-size: 1.05rem; color: var(--gold-light); }
+.blind-item .bl-usd { font-size: .72rem; color: var(--text-muted); }
+
+/* warn */
+.result-warn {
+  background: #1a0e0e;
+  border: 1px solid #4a2020;
+  border-radius: 16px;
+  padding: 16px 20px;
+}
+.result-warn h2 { font-family: var(--display); font-size: 1rem; color: #e07070; margin-bottom: 12px; }
+
+.suggestions-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.suggestion-item {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.suggestion-item .sug-text { font-size: .88rem; color: var(--text); flex: 1; }
+.btn-apply {
+  background: var(--gold-dim);
+  border: 1px solid var(--gold);
+  color: var(--cream);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.btn-apply:hover { background: var(--gold); color: var(--green-dark); }
+
+/* ---- TOTALS BAR ---- */
+.totals-bar {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: .8rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+}
+.totals-bar span { font-family: var(--mono); color: var(--text); }
+
+/* suits decoration */
+.suits { font-size: 1rem; opacity: .3; margin-left: 4px; }
+
+/* ---- SELECT / SEARCH HINTS ---- */
+select {
+  width: 100%;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: .95rem;
+  padding: 10px 14px;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239ab89e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  cursor: pointer;
+  transition: border-color .2s;
+}
+select:focus { border-color: var(--gold-dim); box-shadow: 0 0 0 3px rgba(201,168,76,.15); }
+select option { background: #122a1c; color: var(--text); }
+
+/* ---- EDITABLE STACK RESULT ---- */
+.stack-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  padding: 16px;
+}
+.chip-edit-card {
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: border-color .2s;
+}
+.chip-edit-card:focus-within {
+  border-color: var(--gold-dim);
+  box-shadow: 0 0 0 2px rgba(201,168,76,.1);
+}
+.chip-edit-card .face-val { font-family: var(--mono); font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+.chip-edit-card input.piece-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  color: var(--gold-light);
+  font-family: var(--mono);
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1;
+  padding: 0 0 2px;
+  outline: none;
+  -moz-appearance: textfield;
+}
+.chip-edit-card input.piece-input::-webkit-inner-spin-button,
+.chip-edit-card input.piece-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.chip-edit-card input.piece-input:focus { border-bottom-color: var(--gold); }
+.chip-edit-card .piece-label { font-size: .72rem; color: var(--text-muted); margin-top: 2px; }
+.chip-edit-card .chip-max   { font-size: .68rem; color: #3d6b4a; margin-top: 1px; }
+
+.edit-status {
+  margin: 0 16px 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: .82rem;
+  font-family: var(--mono);
+  display: none;
+}
+.edit-status.ok   { background: rgba(45,120,80,.2); border: 1px solid #2d7840; color: #7dbb90; }
+.edit-status.warn { background: rgba(160,40,40,.15); border: 1px solid #7a3030; color: #e08080; }
+.edit-status.info { background: rgba(201,168,76,.08); border: 1px solid var(--gold-dim); color: var(--gold); }
 </style>
 </head>
 <body>
-  <h1>Poker Stack Planner — exact buy-in (mixed, balanced)</h1>
-  <div class="hint">Enter players, target buy-in and chip inventory. Tool finds realistic mixed-denom per-player stacks that exactly match the buy-in. It prefers balanced mixes (≥3 denom types) to avoid unrealistic single-denom stacks.</div>
 
-  <label>Players</label>
-  <input id="players" type="number" min="1" value="6"/>
+<header class="site-header">
+  <div class="logo">
+    Poker Stack Planner
+    <span>Friends Home Game ♠♣♥♦</span>
+  </div>
+  <p class="tagline">Enter your chip inventory → get exact per-player stacks</p>
+</header>
 
-  <label>Target buy-in per player ($)</label>
-  <input id="actualBuyin" type="number" min="0" step="0.01" value="15"/>
+<div class="container">
 
-  <label>Small blind (optional)</label>
-  <input id="sbInput" type="number" min="0" placeholder="e.g. 1"/>
-
-  <label>Big blind (optional)</label>
-  <input id="bbInput" type="number" min="0" placeholder="e.g. 2"/>
-
-  <label style="margin-top:12px">Chips — face value and count (defaults: 100 each)</label>
-  <table class="chip-table" id="chipTable">
-    <thead><tr><th style="width:120px">Face</th><th style="width:140px">Count</th><th>Total</th><th></th></tr></thead>
-    <tbody id="chipBody"></tbody>
-  </table>
-  <div style="margin-top:8px;display:flex;gap:8px">
-    <button id="addDenom" class="btn-secondary">Add denom</button>
-    <button id="resetDenoms" class="btn-secondary">Reset defaults</button>
+  <!-- Game Settings -->
+  <div class="card">
+    <div class="card-title"><span class="pip">♠</span> Game Settings</div>
+    <div class="field-row">
+      <div class="field">
+        <label>Players</label>
+        <input id="players" type="number" min="1" value="6" placeholder="6"/>
+      </div>
+      <div class="field">
+        <label>Buy-in per player ($)</label>
+        <input id="actualBuyin" type="number" min="0" step="0.01" value="15" placeholder="15.00"/>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Small Blind (optional)</label>
+        <input id="sbInput" type="number" min="0" placeholder="e.g. 1"/>
+      </div>
+      <div class="field">
+        <label>Big Blind (optional)</label>
+        <input id="bbInput" type="number" min="0" placeholder="e.g. 2"/>
+      </div>
+    </div>
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--card-border)">
+      <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.08em">Search Hints (optional)</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Target stack depth</label>
+          <select id="bbDepthHint">
+            <option value="">Any (30–300 BB)</option>
+            <option value="50">~50 BB (short)</option>
+            <option value="100">~100 BB (standard)</option>
+            <option value="150">~150 BB (deep)</option>
+            <option value="200">~200 BB (very deep)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Preferred conversion</label>
+          <select id="convHint">
+            <option value="">Any clean rate</option>
+            <option value="1">1 face = 1¢</option>
+            <option value="5">1 face = 5¢</option>
+            <option value="10">1 face = 10¢</option>
+            <option value="25">1 face = 25¢</option>
+            <option value="50">1 face = 50¢</option>
+            <option value="100">1 face = $1</option>
+          </select>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="actions">
-    <button id="calc" class="btn" style="width:100%;margin-top:12px">Calculate exact match</button>
+  <!-- Chip Inventory -->
+  <div class="card">
+    <div class="card-title"><span class="pip">♣</span> Chip Inventory</div>
+    <table class="chip-table">
+      <thead>
+        <tr>
+          <th style="width:110px">Face Value</th>
+          <th>Count</th>
+          <th class="right" style="width:90px">Total</th>
+          <th style="width:40px"></th>
+        </tr>
+      </thead>
+      <tbody id="chipBody"></tbody>
+    </table>
+    <div id="totalsBar" class="totals-bar" style="margin-top:10px">
+      Total pieces: <span id="totalPiecesDisp">—</span> &nbsp;·&nbsp; Total face: <span id="totalFaceDisp">—</span>
+    </div>
+    <div class="chip-actions" style="margin-top:10px">
+      <button class="btn-sm" id="addDenom">+ Add denomination</button>
+      <button class="btn-sm" id="resetDenoms">↺ Reset defaults</button>
+    </div>
   </div>
 
-  <div id="output" class="result" style="display:none"></div>
+  <!-- Calculate -->
+  <button class="btn-calc" id="calc">Calculate Exact Stack ♦</button>
+
+  <!-- Output -->
+  <div id="output" style="margin-top:16px; display:none"></div>
+
+</div>
+
+<style>
+@media (max-width: 480px) {
+  .field-row { grid-template-columns: 1fr; }
+  .result-summary { grid-template-columns: 1fr; }
+}
+</style>
 
 <script>
-/* ---------- config ---------- */
-const NICE_DIVISORS = [2,5,10,20,50,100,200];
-const PREFERRED_PIECE_COUNTS = [10,15,20,25,30];
-/* --------------------------- */
+/* ============================================================
+   CONFIG
+============================================================ */
+// centsPerFace candidates: 1face = M cents (must be a clean number)
+const NICE_MULTIPLIERS = [1, 2, 5, 10, 20, 25, 50, 100];
+// BB depth target range (stack size in big blinds)
+const BB_MIN = 30;
+const BB_MAX = 300;
 
-/* defaults */
-let defaultDenoms = [1,2,5,10,25,50,100];
-let defaultCounts = [100,100,100,100,100,100,100];
+/* ============================================================
+   CHIP TABLE STATE & RENDERING
+============================================================ */
+let denomData = [
+  {face: 1,   count: 100},
+  {face: 2,   count: 100},
+  {face: 5,   count: 100},
+  {face: 10,  count: 100},
+  {face: 25,  count: 100},
+  {face: 50,  count: 100},
+  {face: 100, count: 100},
+];
+
 const chipBody = document.getElementById('chipBody');
 
-function renderChipRows(denoms){
+function renderChips() {
   chipBody.innerHTML = '';
-  denoms.forEach((d,i)=>{
-    let tr = document.createElement('tr');
+  denomData.forEach((d, i) => {
+    const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input class="denom" data-i="${i}" type="number" value="${d}" min="1" style="width:100px"/></td>
-      <td><input class="count" data-i="${i}" type="number" value="${defaultCounts[i]||0}" min="0" style="width:100px"/></td>
-      <td class="total" data-i="${i}">0</td>
-      <td><button class="del" data-i="${i}" style="padding:6px 8px;border-radius:6px">Delete</button></td>
+      <td><input type="number" data-type="face" data-i="${i}" value="${d.face}" min="1"/></td>
+      <td><input type="number" data-type="count" data-i="${i}" value="${d.count}" min="0"/></td>
+      <td><div class="chip-face-display" data-i="${i}">${(d.face*d.count).toLocaleString()}</div></td>
+      <td><button class="btn-del" data-i="${i}" title="Remove">✕</button></td>
     `;
     chipBody.appendChild(tr);
   });
-  updateTotalsDisplay();
+  updateTotals();
 }
-renderChipRows(defaultDenoms);
 
-document.getElementById('addDenom').addEventListener('click', ()=>{
-  defaultDenoms.push(10); defaultCounts.push(100); renderChipRows(defaultDenoms);
+chipBody.addEventListener('input', e => {
+  const el = e.target;
+  if (!el.dataset.type) return;
+  const i = Number(el.dataset.i);
+  const val = Math.max(Number(el.min), Number(el.value) || 0);
+  if (el.dataset.type === 'face') denomData[i].face = val;
+  if (el.dataset.type === 'count') denomData[i].count = val;
+  const totalEl = chipBody.querySelector(`.chip-face-display[data-i="${i}"]`);
+  if (totalEl) totalEl.textContent = (denomData[i].face * denomData[i].count).toLocaleString();
+  updateTotals();
 });
-document.getElementById('resetDenoms').addEventListener('click', ()=>{
-  defaultDenoms = [1,2,5,10,25,50,100]; defaultCounts = [100,100,100,100,100,100,100]; renderChipRows(defaultDenoms);
+
+chipBody.addEventListener('click', e => {
+  const btn = e.target.closest('.btn-del');
+  if (!btn) return;
+  const i = Number(btn.dataset.i);
+  denomData.splice(i, 1);
+  renderChips();
 });
-chipBody.addEventListener('click', (e)=>{
-  if(e.target.classList.contains('del')){
-    let i = Number(e.target.dataset.i);
-    defaultDenoms.splice(i,1); defaultCounts.splice(i,1); renderChipRows(defaultDenoms);
+
+document.getElementById('addDenom').addEventListener('click', () => {
+  denomData.push({face: 10, count: 100});
+  renderChips();
+});
+
+document.getElementById('resetDenoms').addEventListener('click', () => {
+  denomData = [
+    {face: 1, count: 100}, {face: 2, count: 100}, {face: 5, count: 100},
+    {face: 10, count: 100}, {face: 25, count: 100}, {face: 50, count: 100},
+    {face: 100, count: 100},
+  ];
+  renderChips();
+});
+
+function updateTotals() {
+  const tp = denomData.reduce((s, d) => s + d.count, 0);
+  const tf = denomData.reduce((s, d) => s + d.face * d.count, 0);
+  document.getElementById('totalPiecesDisp').textContent = tp.toLocaleString();
+  document.getElementById('totalFaceDisp').textContent = tf.toLocaleString();
+}
+
+renderChips();
+
+/* ============================================================
+   CORE: backtracking distributor
+   Given sortedDenoms (asc) and perMax per player, find counts
+   that sum to exactly targetFace.
+   Prefers: max pieces on smaller denoms (tries maxTake first).
+   minDenoms: minimum number of different denom types required.
+============================================================ */
+function distributeExact(sortedDenoms, perMax, targetFace, minDenoms) {
+  const n = sortedDenoms.length;
+
+  // Precompute maxFaceFrom[i] = max achievable face from denoms[i..n-1]
+  const maxFaceFrom = new Array(n + 1).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    maxFaceFrom[i] = maxFaceFrom[i + 1] + perMax[i] * sortedDenoms[i];
   }
-});
-chipBody.addEventListener('input', updateTotalsDisplay);
+  if (maxFaceFrom[0] < targetFace) return null;
 
-function updateTotalsDisplay(){
-  let rows = chipBody.querySelectorAll('tr');
-  let totalPieces = 0, totalFace = 0;
-  rows.forEach((tr,idx)=>{
-    let denom = Number(tr.querySelector('.denom').value) || 0;
-    let count = Number(tr.querySelector('.count').value) || 0;
-    tr.querySelector('.total').textContent = (denom * count).toLocaleString();
-    totalPieces += count;
-    totalFace += denom * count;
-  });
-}
-
-/* helper: popcount */
-function popcount(x){
-  let c=0;
-  while(x){ c += x & 1; x >>= 1; }
-  return c;
-}
-
-/* bounded knapsack with denom-usage bitmask tie-breaker:
-   dp[k] = {value: best face total, mask: bitmask of denoms used}
-   we maximize value; when values tie, prefer larger popcount(mask) (more denom types).
-*/
-function bestCombinationForPieces(denoms, counts, players, piecesTarget, minDenoms){
-  const n = denoms.length;
-  let perMax = Array.from({length:n}, (_,i)=>Math.floor(counts[i]/players));
-  const maxSum = perMax.reduce((s,v)=>s+v,0);
-  if(piecesTarget > maxSum) return null;
-  const NEG = -1e12;
-  let dp = new Array(piecesTarget+1).fill(null).map(()=>({value: NEG, mask:0}));
-  let parent = new Array(piecesTarget+1).fill(null);
-  dp[0] = {value:0, mask:0};
-
-  for(let i=0;i<n;i++){
-    let val = denoms[i];
-    let cnt = perMax[i];
-    if(cnt <= 0) continue;
-    // binary split
-    let k = 1;
-    let parts = [];
-    while(cnt > 0){
-      let take = Math.min(k, cnt);
-      parts.push(take);
-      cnt -= take;
-      k *= 2;
+  function solve(idx, rem, taken) {
+    if (rem === 0) {
+      const used = taken.filter(t => t > 0).length;
+      return used >= minDenoms ? taken.slice() : null;
     }
-    for(let p of parts){
-      let items = p;
-      let addValue = p * val;
-      for(let used = piecesTarget; used >= items; used--){
-        let prev = dp[used - items];
-        if(prev.value <= NEG) continue;
-        let newValue = prev.value + addValue;
-        let newMask = prev.mask | (1<<i);
-        let cur = dp[used];
-        // decide replacement: larger value OR same value but more denom types
-        if(newValue > cur.value || (newValue === cur.value && popcount(newMask) > popcount(cur.mask))){
-          dp[used] = {value: newValue, mask: newMask};
-          parent[used] = {prev: used - items, denom: i, taken: items, next: parent[used - items]};
-        }
+    if (idx === n) return null;
+    if (maxFaceFrom[idx] < rem) return null; // pruning
+
+    const val = sortedDenoms[idx];
+    const maxCoverRest = maxFaceFrom[idx + 1];
+    const minTake = Math.max(0, Math.ceil((rem - maxCoverRest) / val));
+    const maxTake = Math.min(perMax[idx], Math.floor(rem / val));
+    if (minTake > maxTake) return null;
+
+    // Try max → min: prefer more pieces on smaller denoms
+    for (let take = maxTake; take >= minTake; take--) {
+      taken[idx] = take;
+      const result = solve(idx + 1, rem - take * val, taken);
+      if (result) return result;
+    }
+    taken[idx] = 0;
+    return null;
+  }
+
+  return solve(0, targetFace, new Array(n).fill(0));
+}
+
+/* ============================================================
+   MAIN SEARCH
+   1. For each nice multiplier M (centsPerFace), compute faceTotal = buyinCents / M
+   2. Check whether any denom can serve as BB with depth in [BB_MIN, BB_MAX]
+   3. distributeExact with decreasing minDenoms (5→4→3→2→1)
+   4. Score and return best result (most denom types wins, then most pieces)
+============================================================ */
+function findExactDistribution(denoms, counts, players, actualBuyin, sbVal, bbVal) {
+  const buyinCents = Math.round(actualBuyin * 100);
+  if (buyinCents <= 0 || players <= 0) return null;
+
+  // Sort denoms ascending
+  const order = denoms.map((_, i) => i).sort((a, b) => denoms[a] - denoms[b]);
+  const sortedDenoms = order.map(i => denoms[i]);
+  const perMax = order.map(i => Math.floor(counts[i] / players));
+
+  // Build candidate (faceTotal, centsPerFace, suggestedBBFace) list
+  const candidates = [];
+  for (const M of NICE_MULTIPLIERS) {
+    if (buyinCents % M !== 0) continue;
+    const faceTotal = buyinCents / M;
+    if (faceTotal <= 0) continue;
+
+    // If user specified BB, use it; otherwise try all available denoms as BB
+    const bbCandidates = bbVal ? [bbVal] : sortedDenoms.filter((_, i) => perMax[i] > 0);
+    for (const bbFace of bbCandidates) {
+      const depth = faceTotal / bbFace;
+      if (depth >= BB_MIN && depth <= BB_MAX) {
+        // Score: prefer depth around 100BB, prefer larger centsPerFace (more intuitive)
+        const depthScore = -Math.abs(depth - 100);
+        candidates.push({faceTotal, centsPerFace: M, bbFace, depth, depthScore});
+        break; // one BB candidate per multiplier is enough
       }
     }
   }
 
-  if(dp[piecesTarget].value <= NEG) return null;
-  // check minDenoms constraint
-  let usedMask = dp[piecesTarget].mask;
-  if(minDenoms && popcount(usedMask) < minDenoms) return null;
+  if (candidates.length === 0) return null;
 
-  // reconstruct
-  let takenPer = new Array(n).fill(0);
-  let cur = piecesTarget;
-  while(cur > 0 && parent[cur]){
-    let node = parent[cur];
-    takenPer[node.denom] += node.taken;
-    cur = node.prev;
-  }
-  return {perPlayerCounts: takenPer, faceTotal: dp[piecesTarget].value, usedMask};
-}
+  // Sort: prefer depth closest to 100BB, then largest centsPerFace
+  candidates.sort((a, b) =>
+    (b.depthScore - a.depthScore) || (b.centsPerFace - a.centsPerFace)
+  );
 
-/* choose exact match (cent-precision or nice divisor) */
-function chooseExactMatch(faceTotal, actualBuyin){
-  const actualCents = Math.round(actualBuyin * 100);
-  if(actualCents <= 0) return null;
-  if(actualCents % faceTotal === 0){
-    return {mode:'cent', centsPerFace: actualCents / faceTotal};
-  }
-  let numerator = faceTotal * 100;
-  if(numerator % actualCents === 0){
-    let D = numerator / actualCents;
-    if(Number.isInteger(D) && NICE_DIVISORS.includes(D)){
-      return {mode:'divisor', divisor: D};
+  let best = null;
+
+  for (const cand of candidates) {
+    for (const minD of [5, 4, 3, 2, 1]) {
+      const taken = distributeExact(sortedDenoms, perMax, cand.faceTotal, minD);
+      if (!taken) continue;
+
+      const denomsUsed = taken.filter(t => t > 0).length;
+      const totalPieces = taken.reduce((s, v) => s + v, 0);
+      // Score: more denom types >> more total pieces
+      const score = denomsUsed * 10000 + totalPieces;
+
+      if (!best || score > best.score) {
+        const resultCounts = new Array(denoms.length).fill(0);
+        order.forEach((origIdx, si) => { resultCounts[origIdx] = taken[si]; });
+        best = {
+          score,
+          perPlayerCounts: resultCounts,
+          faceTotal: cand.faceTotal,
+          centsPerFace: cand.centsPerFace,
+          suggestedBBFace: cand.bbFace,
+          bbDepth: cand.depth,
+          denomsUsed,
+          totalPieces,
+        };
+      }
+      break; // found valid allocation for this candidate, move on
     }
   }
-  return null;
+
+  return best;
 }
 
-/* search with progressive minDenoms relaxation (try 3 → 2 → 1) */
-function findExactDistributionForPlayers(denoms, counts, players, actualBuyin){
-  let perPlayerMaxArr = denoms.map((d,i)=>Math.floor(counts[i]/players));
-  let maxSum = perPlayerMaxArr.reduce((s,v)=>s+v,0);
-  if(maxSum <= 0) return null;
-  let candidates = [];
-  for(let v of PREFERRED_PIECE_COUNTS) if(v <= maxSum) candidates.push(v);
-  for(let v=1; v<=maxSum; v++) if(!candidates.includes(v)) candidates.push(v);
-
-  const minDenomOptions = [3,2,1];
-  for(let minDenoms of minDenomOptions){
-    for(let piecesTarget of candidates){
-      let best = bestCombinationForPieces(denoms, counts, players, piecesTarget, minDenoms);
-      if(!best) continue;
-      let match = chooseExactMatch(best.faceTotal, actualBuyin);
-      if(match) return {piecesTarget, perPlayerCounts: best.perPlayerCounts, faceTotal: best.faceTotal, match, usedMask: best.usedMask, minDenomsUsed: popcount(best.usedMask)};
-    }
-    // if none found with this minDenoms, continue with lower minDenoms
-  }
-  return null;
-}
-
-/* suggestions similar to previous file (players ±1, nice divisor buyins) */
-function gatherSuggestions(denoms, counts, players, actualBuyin){
+/* ============================================================
+   SUGGESTIONS when no exact match found
+============================================================ */
+function gatherSuggestions(denoms, counts, players, actualBuyin) {
+  const seen = new Set();
   const suggestions = [];
-  const rangePlayers = [players];
-  if(players > 1) rangePlayers.push(players-1);
-  rangePlayers.push(players+1);
 
-  const actual = actualBuyin;
-  const minAccept = actual * 0.5;
-  const maxAccept = actual * 2.0;
-
-  let faceTotals = [];
-  for(let p of rangePlayers){
-    let perPlayerMaxArr = denoms.map((d,i)=>Math.floor(counts[i]/p));
-    let maxSum = perPlayerMaxArr.reduce((s,v)=>s+v,0);
-    if(maxSum <= 0) continue;
-    let candidates = [];
-    for(let v of PREFERRED_PIECE_COUNTS) if(v <= maxSum) candidates.push(v);
-    for(let v=1; v<=maxSum; v++) if(!candidates.includes(v)) candidates.push(v);
-    for(let piecesTarget of candidates){
-      // no minDenoms for suggestion; just get best faceTotals (try minDenoms=1)
-      let best = bestCombinationForPieces(denoms, counts, p, piecesTarget, 1);
-      if(!best) continue;
-      faceTotals.push({players:p, faceTotal: best.faceTotal, piecesTarget});
-    }
+  const tryPlayers = [players, players > 1 ? players - 1 : null, players + 1].filter(Boolean);
+  const altBuyins = new Set([actualBuyin]);
+  // Try round numbers within 2× range
+  for (const v of [5, 10, 15, 20, 25, 30, 40, 50, 75, 100]) {
+    if (v >= actualBuyin * 0.4 && v <= actualBuyin * 2.5) altBuyins.add(v);
   }
 
-  let candMap = new Map();
-  for(let item of faceTotals){
-    let ft = item.faceTotal;
-    if(ft <= 0) continue;
-    for(let D of NICE_DIVISORS){
-      let implied = ft / D;
-      let impliedRounded = Math.round(implied * 100) / 100;
-      if(impliedRounded >= minAccept && impliedRounded <= maxAccept){
-        let key = impliedRounded + '|' + item.players + '|' + D;
-        if(!candMap.has(key)){
-          candMap.set(key, {implied: impliedRounded, players: item.players, divisor: D, faceTotal: ft, piecesTarget: item.piecesTarget});
+  for (const p of tryPlayers) {
+    for (const buyin of altBuyins) {
+      const r = findExactDistribution(denoms, counts, p, buyin, null, null);
+      if (r) {
+        const key = `${buyin}|${p}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          suggestions.push({suggestedBuyin: buyin, players: p, result: r});
         }
       }
     }
   }
 
-  let arr = Array.from(candMap.values());
-  arr.sort((a,b)=> Math.abs(a.implied - actual) - Math.abs(b.implied - actual));
-  for(let i=0;i<Math.min(5,arr.length); i++){
-    let c = arr[i];
-    suggestions.push({
-      type: 'buyin',
-      suggestedBuyin: c.implied,
-      players: c.players,
-      divisor: c.divisor,
-      faceTotal: c.faceTotal,
-      info: `Use ${c.players} players and divisor ${c.divisor} → face_total ${c.faceTotal} ⇒ $${c.implied.toFixed(2)}`
-    });
-  }
-  if(!suggestions.some(s=>s.players === players-1) && players>1){
-    suggestions.push({type:'players', action:'decrease', players: players-1, info:`Try ${players-1} players`});
-  }
-  if(!suggestions.some(s=>s.players === players+1)){
-    suggestions.push({type:'players', action:'increase', players: players+1, info:`Try ${players+1} players`});
-  }
-  return suggestions;
+  suggestions.sort((a, b) => {
+    const da = Math.abs(a.suggestedBuyin - actualBuyin) + Math.abs(a.players - players) * 5;
+    const db = Math.abs(b.suggestedBuyin - actualBuyin) + Math.abs(b.players - players) * 5;
+    return da - db;
+  });
+
+  return suggestions.slice(0, 5);
 }
 
-/* main calculate handler */
-document.getElementById('calc').addEventListener('click', ()=>{
-  const inputPlayers = Math.max(1, Math.floor(Number(document.getElementById('players').value) || 1));
-  const actualBuyin = Math.max(0, Number(document.getElementById('actualBuyin').value) || 0);
-  const sbInput = Number(document.getElementById('sbInput').value) || null;
-  const bbInput = Number(document.getElementById('bbInput').value) || null;
+/* ============================================================
+   MAIN SEARCH  (with bbDepthHint and convHint)
+============================================================ */
+function findExactDistribution(denoms, counts, players, actualBuyin, sbVal, bbVal, bbDepthHint, convHint) {
+  const buyinCents = Math.round(actualBuyin * 100);
+  if (buyinCents <= 0 || players <= 0) return null;
 
-  // read denoms & counts
-  let denomEls = Array.from(document.querySelectorAll('.denom'));
-  let countEls = Array.from(document.querySelectorAll('.count'));
-  let denoms = denomEls.map(e=>Math.max(1, Math.floor(Number(e.value) || 0)));
-  let counts = countEls.map(e=>Math.max(0, Math.floor(Number(e.value) || 0)));
+  const order = denoms.map((_, i) => i).sort((a, b) => denoms[a] - denoms[b]);
+  const sortedDenoms = order.map(i => denoms[i]);
+  const perMax = order.map(i => Math.floor(counts[i] / players));
 
-  // totals
-  let totalPieces = counts.reduce((s,c)=>s+c,0);
-  let totalFace = denoms.reduce((s,d,i)=> s + d*counts[i], 0);
+  const bbTarget = bbDepthHint || 100;
+  const mults = convHint ? [Number(convHint)] : NICE_MULTIPLIERS;
 
-  const out = document.getElementById('output');
-  out.style.display = 'block';
-  out.innerHTML = '';
-  out.insertAdjacentHTML('beforeend', `<p class="hint">Total pieces available: <strong>${totalPieces.toLocaleString()}</strong> · Total face value available: <strong>${totalFace.toLocaleString()}</strong></p>`);
-
-  // try exact distribution for current players
-  let result = findExactDistributionForPlayers(denoms, counts, inputPlayers, actualBuyin);
-  if(result){
-    // show per-player counts (no piecesTarget label)
-    let html = '<strong>Per-player stack (by face)</strong><ul style="margin-top:8px">';
-    for(let i=0;i<result.perPlayerCounts.length;i++){
-      html += `<li>${denoms[i]} : <b>${result.perPlayerCounts[i]}</b> pcs</li>`;
+  const candidates = [];
+  for (const M of mults) {
+    if (buyinCents % M !== 0) continue;
+    const faceTotal = buyinCents / M;
+    if (faceTotal <= 0) continue;
+    const bbCandidates = bbVal ? [bbVal] : sortedDenoms.filter((_, i) => perMax[i] > 0);
+    for (const bbFace of bbCandidates) {
+      const depth = faceTotal / bbFace;
+      const minDepth = bbDepthHint ? bbDepthHint * 0.5 : BB_MIN;
+      const maxDepth = bbDepthHint ? bbDepthHint * 2.0 : BB_MAX;
+      if (depth >= minDepth && depth <= maxDepth) {
+        candidates.push({faceTotal, centsPerFace: M, bbFace, depth, depthScore: -Math.abs(depth - bbTarget)});
+        break;
+      }
     }
-    html += '</ul>';
-    out.insertAdjacentHTML('beforeend', html);
-    out.insertAdjacentHTML('beforeend', `<p style="margin-top:8px"><strong>Per-player total (face value):</strong> ${result.faceTotal.toLocaleString()}</p>`);
-    if(result.match.mode === 'cent'){
-      out.insertAdjacentHTML('beforeend', `<p><strong>Exact match (cent-precision)</strong>: 1 face unit = <b>${result.match.centsPerFace}</b> cents → per-player = <b>$${((result.faceTotal * result.match.centsPerFace)/100).toFixed(2)}</b></p>`);
-    } else {
-      out.insertAdjacentHTML('beforeend', `<p><strong>Exact match (nice divisor)</strong>: divide face_total by <b>${result.match.divisor}</b> → per-player = <b>$${(result.faceTotal / result.match.divisor).toFixed(2)}</b> (exact)</p>`);
+  }
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => (b.depthScore - a.depthScore) || (b.centsPerFace - a.centsPerFace));
+
+  let best = null;
+  for (const cand of candidates) {
+    for (const minD of [5, 4, 3, 2, 1]) {
+      const taken = distributeExact(sortedDenoms, perMax, cand.faceTotal, minD);
+      if (!taken) continue;
+      const denomsUsed = taken.filter(t => t > 0).length;
+      const totalPieces = taken.reduce((s, v) => s + v, 0);
+      const score = denomsUsed * 10000 + totalPieces;
+      if (!best || score > best.score) {
+        const resultCounts = new Array(denoms.length).fill(0);
+        order.forEach((origIdx, si) => { resultCounts[origIdx] = taken[si]; });
+        best = {score, perPlayerCounts: resultCounts, faceTotal: cand.faceTotal,
+          centsPerFace: cand.centsPerFace, suggestedBBFace: cand.bbFace,
+          bbDepth: cand.depth, denomsUsed, totalPieces};
+      }
+      break;
     }
-    out.insertAdjacentHTML('beforeend', `<p class="hint">Target buy-in: $${actualBuyin.toFixed(2)}</p>`);
-    out.insertAdjacentHTML('beforeend', `<p class="hint">Denoms used: <strong>${result.minDenomsUsed}</strong></p>`);
-    // blinds suggestion
-    const targetBB = 30;
-    let rawBig = result.faceTotal / Math.max(1, targetBB);
-    let sortedDenoms = denoms.slice().map(v=>Math.max(1,v)).filter(Boolean).sort((a,b)=>a-b);
-    function denomFloor(val){
-      let cand = sortedDenoms.filter(d=>d <= Math.max(1, Math.floor(val)));
-      return cand.length ? cand[cand.length-1] : (sortedDenoms[0] || 1);
+  }
+  return best;
+}
+
+/* ============================================================
+   SUGGESTIONS
+============================================================ */
+function gatherSuggestions(denoms, counts, players, actualBuyin) {
+  const seen = new Set();
+  const suggestions = [];
+  const tryPlayers = [players, players > 1 ? players - 1 : null, players + 1].filter(Boolean);
+  const altBuyins = new Set([actualBuyin]);
+  for (const v of [5, 10, 15, 20, 25, 30, 40, 50, 75, 100]) {
+    if (v >= actualBuyin * 0.4 && v <= actualBuyin * 2.5) altBuyins.add(v);
+  }
+  for (const p of tryPlayers) {
+    for (const buyin of altBuyins) {
+      const r = findExactDistribution(denoms, counts, p, buyin, null, null, null, null);
+      if (r) {
+        const key = `${buyin}|${p}`;
+        if (!seen.has(key)) { seen.add(key); suggestions.push({suggestedBuyin: buyin, players: p, result: r}); }
+      }
     }
-    let bigNominal = denomFloor(rawBig);
-    let smallNominal = Math.max(1, Math.round(bigNominal/2));
-    let bbDepth = (result.faceTotal / Math.max(1, bigNominal)).toFixed(1);
-    const bbDisplay = bbInput ? bbInput : `${bigNominal} (suggested)`;
-    const sbDisplay = sbInput ? sbInput : `${smallNominal} (suggested)`;
-    out.insertAdjacentHTML('beforeend', `<h3 style="margin-top:10px">Blinds (face)</h3>
-      <p>Big blind: <strong>${bbDisplay}</strong> · Small blind: <strong>${sbDisplay}</strong></p>
-      <p class="hint">Stack depth: <strong>${bbDepth} BB</strong> (${result.faceTotal} ÷ ${bigNominal})</p>`);
-    out.insertAdjacentHTML('beforeend', `<details style="margin-top:8px"><summary>Debug</summary><div class="mono" style="margin-top:8px">foundType=${result.match.mode} faceTotal=${result.faceTotal} denomsUsed=${result.minDenomsUsed}</div></details>`);
+  }
+  suggestions.sort((a, b) => {
+    const da = Math.abs(a.suggestedBuyin - actualBuyin) + Math.abs(a.players - players) * 5;
+    const db = Math.abs(b.suggestedBuyin - actualBuyin) + Math.abs(b.players - players) * 5;
+    return da - db;
+  });
+  return suggestions.slice(0, 5);
+}
+
+/* ============================================================
+   RENDER HELPERS
+============================================================ */
+function conversionLabel(centsPerFace) {
+  if (centsPerFace >= 100) return `1 face = $${(centsPerFace / 100).toFixed(0)}`;
+  const map = {1:'1¢',2:'2¢',5:'5¢',10:'10¢',20:'20¢',25:'25¢',50:'50¢'};
+  return `1 face = ${map[centsPerFace] || centsPerFace+'¢'}`;
+}
+function faceToUSD(faceVal, centsPerFace) {
+  return `$${(faceVal * centsPerFace / 100).toFixed(2)}`;
+}
+
+/* ============================================================
+   EDITABLE STACK STATE
+   Stores the current result so the adjustment UI can reference it.
+============================================================ */
+let currentResult = null;
+let currentDenoms = null;
+let currentCounts = null;
+let currentPlayers = null;
+
+function renderResult(result, players, actualBuyin, denoms, counts, sbVal, bbVal) {
+  currentResult = result;
+  currentDenoms = denoms;
+  currentCounts = counts;
+  currentPlayers = players;
+
+  const {perPlayerCounts, faceTotal, centsPerFace, denomsUsed, totalPieces, suggestedBBFace} = result;
+
+  // Editable chip cards
+  const perMax = denoms.map((d, i) => Math.floor(counts[i] / players));
+  let chipCardsHtml = '';
+  for (let i = 0; i < denoms.length; i++) {
+    // Show ALL denoms with inventory, not just those with >0 assigned
+    if (perMax[i] <= 0) continue;
+    const cur = perPlayerCounts[i];
+    chipCardsHtml += `
+      <div class="chip-edit-card">
+        <div class="face-val">Face ${denoms[i]}</div>
+        <input class="piece-input" type="number" min="0" max="${perMax[i]}"
+               data-denom-i="${i}" value="${cur}"/>
+        <div class="piece-label">pieces</div>
+        <div class="chip-max">max ${perMax[i]}</div>
+      </div>`;
+  }
+
+  const perPlayerUSD = faceToUSD(faceTotal, centsPerFace);
+  const convLabel = conversionLabel(centsPerFace);
+
+  const sortedDenoms = denoms.slice().sort((a, b) => a - b);
+  const bigNominal = bbVal || suggestedBBFace;
+  const lowerD = sortedDenoms.filter(d => d < bigNominal);
+  const smallNominal = sbVal || (lowerD.length ? lowerD[lowerD.length - 1] : Math.max(1, Math.floor(bigNominal / 2)));
+  const depth = (faceTotal / bigNominal).toFixed(0);
+  const bigUSD   = faceToUSD(bigNominal, centsPerFace);
+  const smallUSD = faceToUSD(smallNominal, centsPerFace);
+  const bbNote = bbVal ? '' : ' <span style="color:var(--text-muted);font-size:.7rem">(suggested)</span>';
+  const sbNote = sbVal ? '' : ' <span style="color:var(--text-muted);font-size:.7rem">(suggested)</span>';
+
+  return `
+    <div class="result-success">
+      <div class="result-header">
+        <h2>Per-Player Stack — ${players} players</h2>
+        <span class="badge-exact">Exact Match</span>
+      </div>
+      <div style="padding:10px 16px 4px;font-size:.75rem;color:var(--text-muted)">
+        ✏️ Edit any count below — totals update live
+      </div>
+      <div class="stack-edit-grid" id="stackEditGrid">${chipCardsHtml}</div>
+      <div class="edit-status" id="editStatus"></div>
+      <div class="result-summary" id="resultSummary">
+        <div class="summary-box highlight">
+          <div class="s-label">Buy-in (exact)</div>
+          <div class="s-value" id="sumBuyin">${perPlayerUSD}</div>
+          <div class="s-sub" id="sumConv">${convLabel}</div>
+        </div>
+        <div class="summary-box">
+          <div class="s-label">Face total / player</div>
+          <div class="s-value" id="sumFace">${faceTotal.toLocaleString()}</div>
+          <div class="s-sub" id="sumDenoms">${denomsUsed} denom types · ${totalPieces} pieces</div>
+        </div>
+      </div>
+      <div class="blinds-section">
+        <div class="s-label">♦ Blinds (face value)</div>
+        <div class="blinds-row">
+          <div class="blind-item">
+            <div class="bl-label">Big Blind</div>
+            <div class="bl-val">${bigNominal}${bbNote}</div>
+            <div class="bl-usd" id="blindBigUSD">${bigUSD} · ${depth} BB stack</div>
+          </div>
+          <div class="blind-item">
+            <div class="bl-label">Small Blind</div>
+            <div class="bl-val">${smallNominal}${sbNote}</div>
+            <div class="bl-usd">${smallUSD}</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   LIVE EDIT HANDLER
+   When user changes a piece count:
+   - Recalculate face total
+   - Check if it still matches exact buy-in
+   - Show status (ok / warn)
+   - Try to auto-adjust the "most flexible" denom to restore exact match
+============================================================ */
+function onStackEdit(changedIdx, newVal) {
+  if (!currentResult) return;
+  const {centsPerFace, faceTotal: originalFace} = currentResult;
+  const denoms = currentDenoms;
+  const counts = currentCounts;
+  const players = currentPlayers;
+  const perMax = denoms.map((_, i) => Math.floor(counts[i] / players));
+
+  // Collect all current values from inputs
+  const inputs = document.querySelectorAll('.piece-input');
+  const cur = Array.from(inputs).map(inp => Number(inp.value) || 0);
+
+  // Clamp changed value
+  cur[changedIdx] = Math.min(newVal, perMax[changedIdx]);
+
+  // Current face total
+  let curFace = cur.reduce((s, v, i) => s + v * denoms[i], 0);
+  const diff = originalFace - curFace; // how much face we need to add/remove
+
+  const statusEl = document.getElementById('editStatus');
+  statusEl.style.display = 'block';
+
+  if (diff === 0) {
+    // Perfect match
+    updateSummaryUI(cur, centsPerFace, originalFace);
+    statusEl.className = 'edit-status ok';
+    statusEl.textContent = `✓ Face total = ${originalFace} — exact match maintained`;
     return;
   }
 
-  // No exact distribution for current players — gather suggestions (players ±1 and buy-in alternatives)
-  let suggestions = gatherSuggestions(denoms, counts, inputPlayers, actualBuyin);
-  out.insertAdjacentHTML('beforeend', `<div class="warn"><strong>No exact distribution found (with balance requirement).</strong></div>`);
-  out.insertAdjacentHTML('beforeend', `<div class="suggestions"><strong>Suggestions</strong><ul id="suggestList" style="margin-top:8px"></ul></div>`);
-  const listEl = document.getElementById('suggestList');
-  if(suggestions.length === 0){
-    listEl.insertAdjacentHTML('beforeend', `<li>No straightforward suggestions — try adding chips, lowering players, or changing the target buy-in more widely.</li>`);
+  // Try to auto-adjust: find a denom that can absorb the difference
+  // Prefer adjusting the denom with the most slack (furthest from 0 or max)
+  // Try each denom (skip the one just changed)
+  const adjusted = cur.slice();
+  let autoFixed = false;
+
+  // Build candidates for auto-adjustment: denoms not just changed, sorted by slack
+  const adjustCandidates = denoms
+    .map((d, i) => ({i, d, slack: diff > 0 ? perMax[i] - cur[i] : cur[i]}))
+    .filter(c => c.i !== changedIdx && c.d > 0)
+    .sort((a, b) => b.slack - a.slack);
+
+  for (const cand of adjustCandidates) {
+    if (diff % cand.d !== 0) continue; // must divide evenly
+    const adjAmt = diff / cand.d;
+    const newCount = adjusted[cand.i] + adjAmt;
+    if (newCount >= 0 && newCount <= perMax[cand.i]) {
+      adjusted[cand.i] = newCount;
+      autoFixed = true;
+      break;
+    }
+  }
+
+  if (autoFixed) {
+    // Update input values
+    inputs.forEach((inp, i) => { inp.value = adjusted[i]; });
+    const newFace = adjusted.reduce((s, v, i) => s + v * denoms[i], 0);
+    updateSummaryUI(adjusted, centsPerFace, newFace);
+    statusEl.className = 'edit-status ok';
+    const adjIdx = adjustCandidates.find(c => adjusted[c.i] !== cur[c.i]);
+    const adjDenom = adjIdx ? denoms[adjIdx.i] : '?';
+    statusEl.textContent = `✓ Auto-adjusted Face ${adjDenom} to maintain exact match`;
   } else {
-    suggestions.forEach(s=>{
-      if(s.type === 'buyin'){
-        listEl.insertAdjacentHTML('beforeend', `<li>Try target buy-in <strong>$${s.suggestedBuyin.toFixed(2)}</strong> with <strong>${s.players}</strong> players (face_total ${s.faceTotal}, divisor ${s.divisor}) — ${s.info}</li>`);
-      } else if(s.type === 'players'){
-        listEl.insertAdjacentHTML('beforeend', `<li>${s.info} (try running calculation after changing players)</li>`);
+    // Can't auto-fix — show warning
+    const newFace = cur.reduce((s, v, i) => s + v * denoms[i], 0);
+    updateSummaryUI(cur, centsPerFace, newFace);
+    statusEl.className = 'edit-status warn';
+    const newUSD = (newFace * centsPerFace / 100).toFixed(2);
+    statusEl.textContent = `⚠ Face total = ${newFace} → $${newUSD} (off by ${Math.abs(diff)} face). Adjust another chip to fix.`;
+  }
+}
+
+function updateSummaryUI(cur, centsPerFace, faceTotal) {
+  const el = (id) => document.getElementById(id);
+  if (!el('sumFace')) return;
+  const usd = faceToUSD(faceTotal, centsPerFace);
+  const denomsUsed = cur.filter(v => v > 0).length;
+  const totalPieces = cur.reduce((s, v) => s + v, 0);
+  el('sumBuyin').textContent = usd;
+  el('sumFace').textContent = faceTotal.toLocaleString();
+  el('sumDenoms').textContent = `${denomsUsed} denom types · ${totalPieces} pieces`;
+
+  // Update BB depth
+  const bigBlindEl = document.getElementById('blindBigUSD');
+  if (bigBlindEl) {
+    const bbText = bigBlindEl.textContent;
+    const bbMatch = bbText.match(/·\s*(\d+)/);
+    if (bbMatch) {
+      // re-derive BB nominal from text (it's in the static sibling)
+      const bbValEl = bigBlindEl.previousElementSibling;
+      if (bbValEl) {
+        const bbFace = parseInt(bbValEl.textContent);
+        if (bbFace > 0) {
+          const newDepth = (faceTotal / bbFace).toFixed(0);
+          bigBlindEl.textContent = `${faceToUSD(bbFace, centsPerFace)} · ${newDepth} BB stack`;
+        }
       }
+    }
+  }
+}
+
+/* ============================================================
+   NO MATCH
+============================================================ */
+function renderNoMatch(suggestions, players, actualBuyin) {
+  let sugHtml = '';
+  if (suggestions.length === 0) {
+    sugHtml = `<li class="suggestion-item"><span class="sug-text">No suggestions found — try adding more chips or a very different buy-in amount.</span></li>`;
+  } else {
+    suggestions.forEach(s => {
+      const pNote = s.players !== players ? ` · ${s.players} players` : '';
+      const r = s.result;
+      const text = `Buy-in <strong>$${s.suggestedBuyin.toFixed(2)}</strong>${pNote} — ${r.denomsUsed} denom types, ${conversionLabel(r.centsPerFace)}, ~${r.bbDepth.toFixed(0)} BB stack`;
+      sugHtml += `
+        <li class="suggestion-item">
+          <span class="sug-text">${text}</span>
+          <button class="btn-apply" onclick="applyBuyin(${s.suggestedBuyin}, ${s.players})">Apply →</button>
+        </li>`;
     });
   }
-  out.insertAdjacentHTML('beforeend', `<details style="margin-top:8px"><summary>Debug</summary><div class="mono" style="margin-top:8px">totalFace=${totalFace} totalPieces=${totalPieces}</div></details>`);
+  return `
+    <div class="result-warn">
+      <h2>♥ No exact distribution found</h2>
+      <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:12px">
+        Could not make ${players} stacks matching $${actualBuyin.toFixed(2)} with a clean conversion and 30–300 BB depth. Try a suggestion:
+      </p>
+      <ul class="suggestions-list">${sugHtml}</ul>
+    </div>`;
+}
+
+/* ============================================================
+   APPLY HELPERS
+============================================================ */
+window.applyBuyin = (buyin, players) => {
+  document.getElementById('actualBuyin').value = buyin;
+  document.getElementById('players').value = players;
+  document.getElementById('calc').click();
+};
+
+/* ============================================================
+   MAIN HANDLER
+============================================================ */
+document.getElementById('calc').addEventListener('click', () => {
+  const players      = Math.max(1, Math.floor(Number(document.getElementById('players').value) || 1));
+  const actualBuyin  = Math.max(0, Number(document.getElementById('actualBuyin').value) || 0);
+  const sbVal        = Number(document.getElementById('sbInput').value) || null;
+  const bbVal        = Number(document.getElementById('bbInput').value) || null;
+  const bbDepthHint  = Number(document.getElementById('bbDepthHint').value) || null;
+  const convHint     = Number(document.getElementById('convHint').value) || null;
+
+  const denoms = denomData.map(d => Math.max(1, d.face));
+  const counts = denomData.map(d => Math.max(0, d.count));
+
+  const out = document.getElementById('output');
+  out.style.display = 'none';
+  out.innerHTML = '';
+
+  const result = findExactDistribution(denoms, counts, players, actualBuyin, sbVal, bbVal, bbDepthHint, convHint);
+
+  if (result) {
+    out.innerHTML = renderResult(result, players, actualBuyin, denoms, counts, sbVal, bbVal);
+    // Wire up live edit handlers
+    out.addEventListener('input', e => {
+      const inp = e.target.closest('.piece-input');
+      if (!inp) return;
+      const i = Number(inp.dataset.denomI);
+      onStackEdit(i, Number(inp.value) || 0);
+    });
+  } else {
+    const suggestions = gatherSuggestions(denoms, counts, players, actualBuyin);
+    out.innerHTML = renderNoMatch(suggestions, players, actualBuyin);
+  }
+
+  out.style.display = 'block';
+  out.scrollIntoView({behavior: 'smooth', block: 'nearest'});
 });
-/* initial totals */
-updateTotalsDisplay();
 </script>
 </body>
 </html>
