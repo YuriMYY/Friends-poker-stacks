@@ -3,116 +3,86 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Poker Stack Planner — Home Game (face value)</title>
+<title>Poker Stack Planner — per-player chips</title>
 <style>
-:root{--bg:#fbfbfc;--muted:#666;--accent:#0a66cc;--warn:#fff0f2;--card:#fff}
-html,body{height:100%}
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Hiragino Kaku Gothic ProN","Meiryo",sans-serif;margin:12px;background:var(--bg);color:#111}
-h1{font-size:1.05rem;margin:0 0 8px}
-label{display:block;margin-top:10px;font-weight:700}
-input,select,button{padding:10px;border:1px solid #e6e6e6;border-radius:8px;font-size:1rem}
-input[type="number"]{width:160px}
-button{background:var(--accent);color:#fff;border:0;cursor:pointer}
-.button-secondary{background:#888;color:#fff;border:0;padding:8px 10px;border-radius:8px}
-.grid{display:grid;grid-template-columns:1fr 380px;gap:14px}
-.chip-table{width:100%;border-collapse:collapse;margin-top:8px}
-.chip-table th,.chip-table td{padding:8px;border-bottom:1px solid #eee;text-align:left}
-.result{margin-top:14px;padding:12px;border-radius:10px;background:var(--card);border:1px solid #eee}
-.warn{color:#a00;background:var(--warn);padding:10px;border-radius:8px;margin-top:8px;border:1px solid #f5c}
-.mono{font-family:monospace;background:#f7f7f7;padding:6px;border-radius:6px;display:inline-block}
-.row{display:flex;gap:8px;align-items:center}
-.small{font-size:.94rem;color:var(--muted)}
-@media(max-width:880px){.grid{grid-template-columns:1fr}input[type="number"]{width:100%}}
+  :root{--bg:#fbfbfc;--muted:#666;--accent:#0a66cc;--warn:#fff0f2;--card:#fff}
+  html,body{height:100%}
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Hiragino Kaku Gothic ProN","Meiryo",sans-serif;margin:14px;background:var(--bg);color:#111}
+  h1{font-size:1.1rem;margin:0 0 8px}
+  .small{color:var(--muted);font-size:.95rem;margin-bottom:12px}
+  label{display:block;font-weight:700;margin-top:10px}
+  input[type="number"], button{padding:10px;border:1px solid #e6e6e6;border-radius:8px;font-size:1rem}
+  input[type="number"]{width:160px}
+  .chip-table{width:100%;border-collapse:collapse;margin-top:8px}
+  .chip-table th,.chip-table td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+  .result{margin-top:16px;padding:12px;border-radius:10px;background:var(--card);border:1px solid #eee}
+  .warn{color:#a00;background:var(--warn);padding:10px;border-radius:8px;margin-top:8px;border:1px solid #f5c}
+  .mono{font-family:monospace;background:#f7f7f7;padding:6px;border-radius:6px;display:inline-block}
+  .actions{margin-top:12px}
+  .btn{background:var(--accent);color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer}
+  .btn-secondary{background:#888;color:#fff;border:0;padding:8px 10px;border-radius:8px}
+  @media (max-width:720px){ input[type="number"]{width:100%} }
 </style>
 </head>
 <body>
-  <h1>Poker Stack Planner — per-player chip output</h1>
-  <p class="small">Outputs per-player chip counts by denomination, per-player face total (rounded), and optional conversion to $.</p>
+  <h1>Poker Stack Planner — per-player chips</h1>
+  <div class="small">Enter chip inventory and players. Results show a clean per-player chip list, per-player face total (rounded), and conversion example.</div>
 
-  <div class="grid">
-    <div>
-      <label>Players</label>
-      <input id="players" type="number" min="1" value="6" />
+  <!-- Inputs (vertical) -->
+  <label>Players</label>
+  <input id="players" type="number" min="1" value="6">
 
-      <label>Actual buy-in per player ($) — optional (for conversion)</label>
-      <input id="actualBuyin" type="number" min="0" step="0.01" placeholder="e.g. 50" />
+  <label>Actual buy-in per player ($) — optional</label>
+  <input id="actualBuyin" type="number" min="0" step="0.01" placeholder="e.g. 20">
 
-      <label>SB (optional)</label>
-      <input id="sbInput" type="number" min="0" placeholder="e.g. 1" />
+  <label>Small blind (optional)</label>
+  <input id="sbInput" type="number" min="0" placeholder="e.g. 1">
 
-      <label>BB (optional)</label>
-      <input id="bbInput" type="number" min="0" placeholder="e.g. 2" />
+  <label>Big blind (optional)</label>
+  <input id="bbInput" type="number" min="0" placeholder="e.g. 2">
 
-      <label style="margin-top:12px">Rounding step for per-player face total</label>
-      <select id="roundStep">
-        <option value="10">10</option>
-        <option value="25">25</option>
-        <option value="50" selected>50</option>
-        <option value="100">100</option>
-        <option value="250">250</option>
-      </select>
+  <!-- Internal policy (not user-set) -->
+  <div style="margin-top:12px">
+    <span class="small"><strong>Rounding step:</strong> 50 (applied to per-player face total)</span><br>
+    <span class="small"><strong>Conversion divisor:</strong> 20 (example: face_total ÷ 20 ≈ $)</span>
+  </div>
 
-      <label style="margin-top:8px">Conversion divisor (Real $ = face_total ÷ divisor)</label>
-      <select id="divisor">
-        <option value="2">2</option>
-        <option value="5">5</option>
-        <option value="10">10</option>
-        <option value="20" selected>20</option>
-        <option value="50">50</option>
-        <option value="100">100</option>
-        <option value="200">200</option>
-      </select>
+  <!-- Chip table -->
+  <label style="margin-top:14px">Chips — face value and count</label>
+  <table class="chip-table" id="chipTable">
+    <thead><tr><th style="width:120px">Face</th><th style="width:140px">Count</th><th>Total</th><th></th></tr></thead>
+    <tbody id="chipBody"></tbody>
+  </table>
+  <div style="margin-top:8px;display:flex;gap:8px">
+    <button id="addDenom" class="btn-secondary">Add denom</button>
+    <button id="resetDenoms" class="btn-secondary">Reset defaults</button>
+  </div>
 
-      <div style="margin-top:12px">
-        <button id="calc" style="width:100%">Calculate per-player breakdown</button>
-      </div>
-    </div>
-
-    <div>
-      <div style="padding:10px;background:#fff;border-radius:8px;border:1px solid #eee">
-        <h3 style="margin:0 0 8px">Inventory summary</h3>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <div style="flex:1">
-            <div class="small">Total pieces</div><div id="totalPieces" style="font-weight:700">—</div>
-          </div>
-          <div style="flex:1">
-            <div class="small">Total face value</div><div id="totalFace" style="font-weight:700">—</div>
-          </div>
-          <div style="flex:1">
-            <div class="small">Equal-share max / player</div><div id="maxFace" style="font-weight:700">—</div>
-          </div>
-        </div>
-      </div>
-
-      <div style="margin-top:12px">
-        <label>Chips — face value and count</label>
-        <table class="chip-table" id="chipTable">
-          <thead><tr><th>Face</th><th>Count</th><th>Total</th><th></th></tr></thead>
-          <tbody id="chipBody"></tbody>
-        </table>
-        <div style="margin-top:8px;display:flex;gap:8px">
-          <button id="addDenom" class="button-secondary">Add denom</button>
-          <button id="resetDenoms" class="button-secondary">Reset defaults</button>
-        </div>
-      </div>
-    </div>
+  <div class="actions">
+    <button id="calc" class="btn" style="width:100%;margin-top:12px">Calculate</button>
   </div>
 
   <div id="output" class="result" style="display:none"></div>
 
 <script>
-/* defaults */
+/* ---------- CONFIG (internal defaults, not inputs) ---------- */
+const ROUND_STEP = 50;   // per-player face total will be rounded down to multiple of this
+const CONVERSION_DIVISOR = 20; // Real $ = face_total ÷ CONVERSION_DIVISOR
+/* ----------------------------------------------------------- */
+
+/* defaults: all counts 100 */
 let defaultDenoms = [1,2,5,25,50,100];
-let defaultCounts = [50,50,50,30,20,10];
+let defaultCounts = [100,100,100,100,100,100];
+
 const chipBody = document.getElementById('chipBody');
 
 function renderChipRows(denoms){
   chipBody.innerHTML = '';
-  denoms.forEach((d,i) => {
+  denoms.forEach((d,i)=>{
     let tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input class="denom" data-i="${i}" type="number" value="${d}" min="1" style="width:80px" /></td>
-      <td><input class="count" data-i="${i}" type="number" min="0" value="${defaultCounts[i] || 0}" style="width:80px" /></td>
+      <td><input class="denom" data-i="${i}" type="number" value="${d}" min="1" style="width:100px"/></td>
+      <td><input class="count" data-i="${i}" type="number" value="${defaultCounts[i]||0}" min="0" style="width:100px"/></td>
       <td class="total" data-i="${i}">0</td>
       <td><button class="del" data-i="${i}" style="padding:6px 8px;border-radius:6px">Delete</button></td>
     `;
@@ -122,12 +92,12 @@ function renderChipRows(denoms){
 }
 renderChipRows(defaultDenoms);
 
-/* add/delete/reset */
+/* add / reset / delete handlers */
 document.getElementById('addDenom').addEventListener('click', ()=>{
-  defaultDenoms.push(10); defaultCounts.push(0); renderChipRows(defaultDenoms);
+  defaultDenoms.push(10); defaultCounts.push(100); renderChipRows(defaultDenoms);
 });
 document.getElementById('resetDenoms').addEventListener('click', ()=>{
-  defaultDenoms = [1,2,5,25,50,100]; defaultCounts = [50,50,50,30,20,10]; renderChipRows(defaultDenoms);
+  defaultDenoms = [1,2,5,25,50,100]; defaultCounts = [100,100,100,100,100,100]; renderChipRows(defaultDenoms);
 });
 chipBody.addEventListener('click', (e)=>{
   if(e.target.classList.contains('del')){
@@ -140,38 +110,33 @@ chipBody.addEventListener('input', updateTotalsDisplay);
 function updateTotalsDisplay(){
   let rows = chipBody.querySelectorAll('tr');
   let totalPieces = 0, totalFace = 0;
-  rows.forEach((tr,idx) => {
+  rows.forEach((tr,idx)=>{
     let denom = Number(tr.querySelector('.denom').value) || 0;
     let count = Number(tr.querySelector('.count').value) || 0;
     tr.querySelector('.total').textContent = (denom * count).toLocaleString();
     totalPieces += count;
     totalFace += denom * count;
   });
-  document.getElementById('totalPieces').textContent = totalPieces.toLocaleString();
-  document.getElementById('totalFace').textContent = totalFace.toLocaleString();
-  let players = Math.max(1, Math.floor(Number(document.getElementById('players').value) || 1));
-  document.getElementById('maxFace').textContent = Math.floor(totalFace/players).toLocaleString();
 }
 
-/* allocation that respects pieces and aims for a rounded target */
+/* allocation helper (respect pieces) */
 function allocatePerPlayer(targetFace, denoms, counts, players){
-  // greedy from largest denom to smallest, limited by floor(count/players)
-  let items = denoms.map((d,i)=>({d:d, count:counts[i], idx:i})).sort((a,b)=>b.d-a.d);
+  // greedy large -> small, limited by floor(count/players)
+  let items = denoms.map((d,i)=>({d:d,count:counts[i],idx:i})).sort((a,b)=>b.d-a.d);
   let perPlayer = Array(denoms.length).fill(0);
   let rem = targetFace;
   for(let it of items){
     let maxEach = Math.floor(it.count / players);
-    if(maxEach<=0) continue;
+    if(maxEach <= 0) continue;
     let needEach = Math.floor(rem / it.d);
     let give = Math.min(maxEach, needEach);
     perPlayer[it.idx] = give;
     rem -= give * it.d;
   }
-  // fill with ascending small denoms if remainder still >0
-  if(rem>0){
+  if(rem > 0){
     let asc = items.slice().sort((a,b)=>a.d-b.d);
     for(let it of asc){
-      if(rem<=0) break;
+      if(rem <= 0) break;
       let maxEach = Math.floor(it.count / players);
       let already = perPlayer[it.idx] || 0;
       while(already < maxEach && rem >= it.d){
@@ -183,8 +148,10 @@ function allocatePerPlayer(targetFace, denoms, counts, players){
   return {perPlayerCounts: perPlayer, remainderPerPlayer: rem};
 }
 
-/* rounding helper: round down to nearest multiple of step */
-function roundDown(n, step){ return Math.floor(n/step)*step; }
+/* rounding down to multiple */
+function roundDown(n, step){
+  return Math.floor(n/step) * step;
+}
 
 /* main calculate */
 document.getElementById('calc').addEventListener('click', ()=>{
@@ -192,9 +159,8 @@ document.getElementById('calc').addEventListener('click', ()=>{
   const actualBuyin = Math.max(0, Number(document.getElementById('actualBuyin').value) || 0);
   const sbInput = Number(document.getElementById('sbInput').value) || null;
   const bbInput = Number(document.getElementById('bbInput').value) || null;
-  const roundStep = Number(document.getElementById('roundStep').value) || 50;
-  const divisor = Number(document.getElementById('divisor').value) || 20;
 
+  // read denoms & counts
   let denomEls = Array.from(document.querySelectorAll('.denom'));
   let countEls = Array.from(document.querySelectorAll('.count'));
   let denoms = denomEls.map(e=>Math.max(1, Math.floor(Number(e.value) || 0)));
@@ -202,24 +168,12 @@ document.getElementById('calc').addEventListener('click', ()=>{
 
   // totals
   let totalPieces = counts.reduce((s,c)=>s+c,0);
-  let totalFace = denoms.reduce((s,d,i)=>s + d*counts[i],0);
+  let totalFace = denoms.reduce((s,d,i)=>s + d*counts[i], 0);
   let maxFacePer = Math.floor(totalFace / players);
 
-  document.getElementById('totalPieces').textContent = totalPieces.toLocaleString();
-  document.getElementById('totalFace').textContent = totalFace.toLocaleString();
-  document.getElementById('maxFace').textContent = maxFacePer.toLocaleString();
-
-  // choose rounded target (<=maxFacePer)
-  let roundedTarget = roundDown(maxFacePer, roundStep);
-  if(roundedTarget <= 0){
-    roundedTarget = Math.min(roundStep, maxFacePer); // fallback
-    roundedTarget = roundDown(maxFacePer, roundStep);
-  }
-
-  // try reduce step if result is zero
-  if(roundedTarget === 0 && maxFacePer > 0){
-    roundedTarget = maxFacePer; // don't round down to zero
-  }
+  // choose rounded target (<= maxFacePer)
+  let roundedTarget = roundDown(maxFacePer, ROUND_STEP);
+  if(roundedTarget <= 0 && maxFacePer > 0) roundedTarget = maxFacePer; // fallback avoid zero
 
   // allocation
   let allocation = allocatePerPlayer(roundedTarget, denoms, counts, players);
@@ -227,76 +181,70 @@ document.getElementById('calc').addEventListener('click', ()=>{
   let achievedFace = perPlayerCounts.reduce((s,c,i)=> s + c*denoms[i], 0);
   let remainder = allocation.remainderPerPlayer;
 
-  // suggested big nominal: achievedFace / targetBB (rounded to nearest available denom floor)
-  const targetBB = Math.max(1, Number(document.getElementById('targetBB').value) || 30);
+  // suggest big/small (face units)
+  const targetBB = 30; // internal default for suggestion
   let rawBig = achievedFace / Math.max(1, targetBB);
-
-  // find denom floor <= rawBig
-  let sortedDenoms = [...denoms].map(v=>Math.max(1,v)).filter(Boolean).sort((a,b)=>a-b);
+  let sortedDenoms = denoms.slice().map(v=>Math.max(1,v)).filter(Boolean).sort((a,b)=>a-b);
   function denomFloor(val){
     let cand = sortedDenoms.filter(d=>d <= Math.max(1, Math.floor(val)));
-    return cand.length ? cand[cand.length-1] : sortedDenoms[0] || 1;
+    return cand.length ? cand[cand.length-1] : (sortedDenoms[0] || 1);
   }
   let bigNominal = denomFloor(rawBig);
   let smallNominal = Math.max(1, Math.round(bigNominal/2));
   let bbDepth = (achievedFace / Math.max(1, bigNominal)).toFixed(1);
 
-  // Prepare clean output (simple)
-  let out = document.getElementById('output');
+  // build output (simple, consistent wording)
+  const out = document.getElementById('output');
   out.style.display = 'block';
   out.innerHTML = '';
 
-  // per-player list
-  let listHtml = '<strong>Per-player stack (by face value)</strong><ul style="margin-top:8px">';
+  // per-player breakdown
+  let ul = '<strong>Per-player stack (by face value)</strong><ul style="margin-top:8px">';
   for(let i=0;i<denoms.length;i++){
-    listHtml += `<li>${denoms[i]} : <b>${perPlayerCounts[i]}</b> pcs</li>`;
+    ul += `<li>${denoms[i]} : <b>${perPlayerCounts[i]}</b> pcs</li>`;
   }
-  listHtml += '</ul>';
-  out.insertAdjacentHTML('beforeend', listHtml);
+  ul += '</ul>';
+  out.insertAdjacentHTML('beforeend', ul);
 
+  // per-player totals
   out.insertAdjacentHTML('beforeend', `<p style="margin-top:8px"><strong>Per-player total (face value):</strong> ${achievedFace.toLocaleString()}</p>`);
 
-  // conversion info (simple)
+  // conversion display (CONVERSION_DIVISOR is internal constant)
+  const converted = (achievedFace / CONVERSION_DIVISOR);
+  out.insertAdjacentHTML('beforeend', `<p><strong>Conversion example:</strong> divide face_total by <b>${CONVERSION_DIVISOR}</b> → ≈ <strong>$${converted.toFixed(2)}</strong> per player</p>`);
   if(actualBuyin > 0){
-    // We use the divisor chosen by user: Real $ = face_total ÷ divisor
-    let implied = (achievedFace / divisor);
-    out.insertAdjacentHTML('beforeend', `<p><strong>Actual buy-in provided:</strong> $${actualBuyin.toFixed(2)} (optional)</p>`);
-    out.insertAdjacentHTML('beforeend', `<p><strong>Conversion (selected):</strong> divide face_total by <b>${divisor}</b> → ≈ $${implied.toFixed(2)} per player</p>`);
-    out.insertAdjacentHTML('beforeend', `<p class="small">If you want Actual buy-in to match exactly, adjust divisor (or change face totals / chips).</p>`);
-  } else {
-    out.insertAdjacentHTML('beforeend', `<p class="small">No Actual buy-in entered. Use divisor to quickly estimate value: face_total ÷ divisor = $</p>`);
+    // show difference
+    out.insertAdjacentHTML('beforeend', `<p class="small">Actual buy-in entered: $${actualBuyin.toFixed(2)} — if you want exact match, adjust chips or divisor.</p>`);
   }
 
-  // Blinds
-  // If user specified BB/SB show them, otherwise show suggested
-  let bbDisplay = bbInput ? bbInput : `${bigNominal} (suggested)`;
-  let sbDisplay = sbInput ? sbInput : `${smallNominal} (suggested)`;
+  // show SB/BB: prefer user input, otherwise suggested
+  const bbDisplay = bbInput ? bbInput : `${bigNominal} (suggested)`;
+  const sbDisplay = sbInput ? sbInput : `${smallNominal} (suggested)`;
   out.insertAdjacentHTML('beforeend', `<h3 style="margin-top:10px">Blinds (face value)</h3>
     <p>Big blind: <strong>${bbDisplay}</strong> · Small blind: <strong>${sbDisplay}</strong></p>
     <p class="small">Stack depth: <strong>${bbDepth} BB</strong> (${achievedFace} ÷ ${bigNominal})</p>`);
 
-  // warnings simplified
+  // warnings
   if(remainder > 0){
-    out.insertAdjacentHTML('beforeend', `<div class="warn">Allocation left remainder of <strong>${remainder}</strong> face pts per player. Top up with small chips or reduce target step.</div>`);
+    out.insertAdjacentHTML('beforeend', `<div class="warn">Allocation left remainder of <strong>${remainder}</strong> face pts per player. Top up with small chips or reduce rounding step.</div>`);
   }
   if(achievedFace < Math.max(100, targetBB*10)){
-    out.insertAdjacentHTML('beforeend', `<div class="warn">Per-player total (${achievedFace}) is small for deep play. Consider lowering target BB or adding chips.</div>`);
+    out.insertAdjacentHTML('beforeend', `<div class="warn">Per-player total (${achievedFace}) is small for deep play. Consider lowering BB or adding chips.</div>`);
   }
 
-  // debug (collapsed)
+  // collapsed debug (helpful while tuning)
   out.insertAdjacentHTML('beforeend', `<details style="margin-top:8px"><summary>Debug</summary>
     <div class="mono" style="margin-top:8px">
+totalPieces=${totalPieces}
 totalFace=${totalFace}
 maxFacePer=${maxFacePer}
 roundedTarget=${roundedTarget}
 achievedFace=${achievedFace}
-rawBig=${rawBig.toFixed(2)}
-bigNominal=${bigNominal}
-divisor=${divisor}
+remainder=${remainder}
     </div></details>`);
 });
 
-/* initial totals */
+/* initial totals render */
 updateTotalsDisplay();
 </script>
 </body>
